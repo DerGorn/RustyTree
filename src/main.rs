@@ -117,6 +117,9 @@ fn main() {
                         frame[index + 3] = 255;
                     }
                 }
+                
+                let elapsed = start.elapsed();
+                println!("Debug: {:?}", elapsed);
 
                 // for pixel in frame.chunks_exact_mut(4) {
                 //     pixel[0] = 0xff; // R
@@ -125,8 +128,6 @@ fn main() {
                 //     pixel[3] = 0xff; // A
                 // }
                 buffer.render().unwrap();
-                let elapsed = start.elapsed();
-                println!("Debug: {:?}", elapsed);
             }
             _ => (),
         }
