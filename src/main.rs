@@ -1,9 +1,9 @@
-use std::time::Instant;
-
 use pixels::{Pixels, SurfaceTexture};
+use rand::Rng;
+use rusty_tree::{Canvas, Color, Vector};
+use std::time::Instant;
 use winit::{
-    dpi::LogicalSize,
-    event::VirtualKeyCode,
+    dpi::PhysicalSize,
     event::{Event, WindowEvent},
     event_loop::EventLoop,
     window::WindowBuilder,
@@ -12,6 +12,53 @@ use winit::{
 const RADIUS: i32 = 15;
 const RADIUS_SQUARE: i32 = RADIUS.pow(2);
 
+fn create_background_buffer(size: PhysicalSize<u32>) -> Canvas {
+    let buffer = Canvas::new_with_simplebuffer(size);
+    buffer
+}
+
+fn reset_background_buffer(buffer: &mut Canvas) {
+    buffer.clear(0);
+
+    let (a, b) = (
+        (buffer.get_width() as f64 * 0.4) as u32,
+        (buffer.get_height() as f64 * 0.4) as u32,
+    );
+
+    let origin_x = buffer.get_width() / 2;
+    let origin_y = buffer.get_height() / 2;
+    buffer.set_draw_color(Color::from_str("white"));
+    buffer.draw_ellipse(Vector::new(origin_x, origin_y), a, b);
+    buffer.set_draw_color(Color::from_str("red"));
+    buffer.draw_ellipse(Vector::new(origin_x, origin_y), b, a);
+    buffer.set_fill_color(Color::from_str("blue"));
+    buffer.fill_rect(Vector::new(origin_x - 50, origin_y - 50), 100, 100);
+    buffer.set_fill_color(Color::from_str("red"));
+    buffer.fill_ellipse(Vector::new(origin_x, origin_y), 30, 30);
+    buffer.set_draw_color(Color::from_str("green"));
+    buffer.draw_line(
+        Vector::new(origin_x, origin_y),
+        Vector::new(buffer.get_width(), buffer.get_height()),
+    );
+    buffer.set_draw_color(Color::from_str("red"));
+    buffer.draw_line(
+        Vector::new(origin_x, 0),
+        Vector::new(0, buffer.get_height()),
+    );
+    buffer.set_draw_color(Color::from_str("blue"));
+    buffer.draw_line(Vector::new(0, origin_y), Vector::new(buffer.get_width(), 0));
+    buffer.set_draw_color(Color::from_str("white"));
+    buffer.draw_line(Vector::new(origin_x, origin_y), Vector::new(0, 0));
+    buffer.set_draw_color(Color::from_str("white"));
+    buffer.draw_rect(Vector::new(origin_x - 50, origin_y - 50), 100, 100);
+}
+
+struct Point {
+    color: Color,
+    position: Vector,
+    velocity: Vector,
+}
+
 fn main() {
     let event_loop = EventLoop::new();
     let builder = WindowBuilder::new().with_title("RustyTree");
@@ -19,18 +66,10 @@ fn main() {
     let window = builder.build(&event_loop).unwrap();
     let mut size = window.inner_size();
 
-    let mut background_buffer: Vec<u8> = vec![200; (size.width * size.height * 4) as usize];
-    let mut buffer = Pixels::new(
-        size.width,
-        size.height,
-        SurfaceTexture::new(size.width, size.height, &window),
-    )
-    .unwrap();
+    let mut background_buffer: Canvas = create_background_buffer(size);
+    reset_background_buffer(&mut background_buffer);
+    let mut buffer = Canvas::new_with_pixels(size, &window).unwrap();
 
-    let mut x: i32 = 0;
-    let mut y: i32 = 0;
-
-    let (mut old_x, mut old_y) = (0, 0);
     event_loop.run(move |event, _, control_flow| {
         control_flow.set_poll();
 
@@ -46,17 +85,18 @@ fn main() {
                 ..
             } => {
                 size = s;
-                background_buffer = vec![200; (size.width * size.height * 4) as usize];
-                buffer.resize_surface(size.width, size.height).unwrap();
-                buffer.resize_buffer(size.width, size.height).unwrap();
-                buffer.frame_mut().clone_from_slice(&background_buffer);
+                background_buffer = create_background_buffer(size);
+                reset_background_buffer(&mut background_buffer);
+
+                buffer.resize(size);
+                buffer
+                    .as_slice()
+                    .clone_from_slice(&background_buffer.as_slice());
             }
             Event::WindowEvent {
                 event: WindowEvent::CursorMoved { position, .. },
                 ..
-            } => {
-                (x, y) = ((position.x).ceil() as i32, (position.y).ceil() as i32);
-            }
+            } => {}
             Event::MainEventsCleared => {
                 // Application update code.
 
@@ -74,52 +114,12 @@ fn main() {
                 // this event rather than in MainEventsCleared, since rendering in here allows
                 // the program to gracefully handle redraws requested by the OS.
 
-                let start = Instant::now();
+                // let start = Instant::now();
 
-                let frame = buffer.frame_mut();
-                // frame.clone_from_slice(&background_buffer);
-                for x_offset in -RADIUS..=RADIUS {
-                    let x = ((old_x as i32) + x_offset) as u32;
-                    if x >= size.width {
-                        continue;
-                    }
-                    let height = ((RADIUS_SQUARE - x_offset.pow(2)) as f64).sqrt() as i32;
-                    for y_offset in -height..=height {
-                        let y = ((old_y as i32) + y_offset) as u32;
-                        if y >= size.height {
-                            continue;
-                        }
+                let frame = buffer.as_slice();
 
-                        let index = ((size.width * y + x) * 4) as usize;
-                        frame[index] = background_buffer[index];
-                        frame[index + 1] = background_buffer[index + 1];
-                        frame[index + 2] = background_buffer[index + 2];
-                        frame[index + 3] = background_buffer[index + 3];
-                    }
-                }
-                (old_x, old_y) = (x, y);
-                for x_offset in -RADIUS..=RADIUS {
-                    let x: u32 = ((x as i32) + x_offset) as u32;
-                    if x >= size.width {
-                        continue;
-                    }
-                    let height = ((RADIUS_SQUARE - x_offset.pow(2)) as f64).sqrt() as i32;
-                    for y_offset in -height..=height {
-                        let y = ((y as i32) + y_offset) as u32;
-                        if y >= size.height {
-                            continue;
-                        }
-
-                        let index = ((size.width * y + x) * 4) as usize;
-                        frame[index] = 255;
-                        frame[index + 1] = 255;
-                        frame[index + 2] = 255;
-                        frame[index + 3] = 255;
-                    }
-                }
-                
-                let elapsed = start.elapsed();
-                println!("Debug: {:?}", elapsed);
+                // let elapsed = start.elapsed();
+                // println!("Debug: {:?}", elapsed);
 
                 // for pixel in frame.chunks_exact_mut(4) {
                 //     pixel[0] = 0xff; // R
