@@ -1,2 +1,3 @@
 # RustyTree
-A simple 2D Canvas Api based on pixels ans winit.
+![THE Test image](Test.png)
+A simple 2D Canvas Api based on pixels and winit.

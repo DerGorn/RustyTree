@@ -146,6 +146,8 @@ impl Canvas {
 
             let x = center.x as f64 + x as f64;
             if x < 0.0 {
+                bottom_y = center.y as i64 - height;
+                top_y = center.y as i64 + height;
                 continue;
             }
             let x = x as u32;
