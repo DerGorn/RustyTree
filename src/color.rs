@@ -1,4 +1,3 @@
-
 #[derive(Clone)]
 pub enum Color {
     RGBA(u8, u8, u8, u8),
@@ -20,7 +19,9 @@ impl Color {
             "red" => Self::new_rgba(255, 0, 0, 255),
             "blue" => Self::new_rgba(0, 0, 255, 255),
             "green" => Self::new_rgba(0, 255, 0, 255),
-            _ => Self::new_rgba(0, 0, 0, 0),
+            "purple" => Self::new_rgba(170, 0, 140, 255),
+            "whine_red" => Self::new_rgba(88, 24, 31, 255),
+            x => panic!("Unknown color name '{}'", x),
         }
     }
 
@@ -29,8 +30,6 @@ impl Color {
         let h_f = h as f64 / 255.0;
         let s_f = s as f64 / 100.0;
         let v_f = l as f64 / 100.0;
-
-        // println!("{}, {}, {}, {}");
 
         let c = v_f * s_f;
         let h_dash = h_f * 6.0;
@@ -69,4 +68,3 @@ impl Color {
         }
     }
 }
-
