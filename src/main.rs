@@ -13,23 +13,45 @@ fn reset_background_buffer(buffer: &mut Renderer) {
     buffer.clear(0);
 
     let (a, b) = (
-        (buffer.get_width() as f64 * 0.4) as u32,
-        (buffer.get_height() as f64 * 0.4) as u32,
+        (buffer.get_width() as f64 * 0.12) as u32,
+        (buffer.get_height() as f64 * 0.12) as u32,
     );
 
     let center = Vector::zero();
-    buffer.set_draw_color(Color::from_str("white"));
-    buffer.draw_ellipse(&center, a, b, 0.0);
-    buffer.set_draw_color(Color::from_str("red"));
-    buffer.draw_ellipse(&center, a, b, 95.0);
-    buffer.set_draw_color(Color::from_str("green"));
-    buffer.draw_ellipse(&center, a, b, 190.0);
-    buffer.set_draw_color(Color::from_str("blue"));
-    buffer.draw_ellipse(&center, b, a, 10.0);
+    for deg in (0..360).step_by(2) {
+        let deg = deg as f64;
+        buffer.set_fill_color(Color::new_hsva(
+            (deg * 255.0 / 360.0).round() as u8,
+            255,
+            255,
+            10,
+        ));
+        buffer.fill_ellipse(&center, a * 2, b * 2, deg);
+    }
+    // buffer.draw_ellipse(&center, a, b, deg);
+    // buffer.set_draw_color(Color::from_str("white"));
+    // buffer.draw_rect(&center, a * 2, b * 2, 0.0);
+    // buffer.draw_ellipse(&center, a, b, 0.0);
+    // buffer.set_draw_color(Color::from_str("red"));
+    // buffer.draw_rect(&center, a * 2, b * 2, 95.0);
+    // buffer.draw_ellipse(&center, a, b, 95.0);
+    // buffer.set_draw_color(Color::from_str("green"));
+    // buffer.draw_rect(&center, a * 2, b * 2, 190.0);
+    // buffer.draw_ellipse(&center, a, b, 190.0);
+    // buffer.set_draw_color(Color::from_str("blue"));
+    // buffer.draw_rect(&center, b * 2, a * 2, 10.0);
+    // buffer.draw_ellipse(&center, b, a, 10.0);
+    // buffer.set_draw_color(Color::from_str("whine_red"));
+    // buffer.draw_rect(&center, a * 2, b * 2, -271.0);
+    // buffer.draw_ellipse(&center, a, b, -271.0);
     // buffer.set_fill_color(Color::from_str("blue"));
     // buffer.fill_ellipse_old(&center, 200, 300, 200.0);
-    buffer.set_fill_color(Color::from_str("whine_red"));
-    buffer.fill_ellipse(&center, 200, 300, 110.0);
+    // buffer.set_fill_color(Color::from_str("whine_red"));
+    // buffer.fill_ellipse(&center, 200, 300, 110.0);
+    // buffer.set_fill_color(Color::new_rgba(255, 255, 255, 100));
+    // buffer.fill_ellipse(&center, 150, 250, 110.0);
+    // buffer.set_fill_color(Color::new_rgba(0, 0, 255, 100));
+    // buffer.fill_ellipse(&center, 300, 200, 110.0);
     // buffer.set_draw_color(Color::from_str("purple"));
     // buffer.draw_ellipse(&center, a, b, 380.0);
 }
@@ -56,6 +78,7 @@ fn main() {
     );
     reset_background_buffer(&mut renderer);
 
+    let mut first = true;
     event_loop.run(move |event, _, control_flow| {
         control_flow.set_poll();
 
@@ -78,7 +101,7 @@ fn main() {
                         size.height as f64 / 2.0,
                     ))),
                 );
-
+                first = true;
                 reset_background_buffer(&mut renderer);
             }
             Event::WindowEvent {
@@ -93,7 +116,10 @@ fn main() {
                 // You only need to call this if you've determined that you need to redraw, in
                 // applications which do not always need to. Applications that redraw continuously
                 // can just render here instead.
-                window.request_redraw();
+                if first {
+                    first = false;
+                    window.request_redraw();
+                }
             }
             Event::RedrawRequested(_) => {
                 // Redraw the application.

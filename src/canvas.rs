@@ -73,6 +73,15 @@ impl Canvas {
 
     fn fill_pixel(buffer: &mut [u8], x: u32, y: u32, buffer_width: u32, color: [u8; 4]) {
         let index = ((buffer_width * y + x) * 4) as usize;
+        let color = if color[3] != 255 {
+            Color::rgba_from_slice(&color)
+                .blend(&Color::rgba_from_slice(
+                    buffer.get(index..=index + 3).unwrap().try_into().unwrap(),
+                ))
+                .to_slice()
+        } else {
+            color
+        };
         buffer[index] = color[0];
         buffer[index + 1] = color[1];
         buffer[index + 2] = color[2];
@@ -167,7 +176,7 @@ impl Drawable<Position> for Canvas {
             for y in y_range {
                 let y = (last_y as i32 + slope_direction as i32 * y) as u32;
                 if y >= self.size.height {
-                    break;
+                    continue;
                 }
                 Self::fill_pixel(buffer, x, y, self.size.width, color);
             }

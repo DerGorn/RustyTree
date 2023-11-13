@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 #[derive(Clone)]
 pub struct Vector {
@@ -179,6 +179,13 @@ impl MulAssign<&f64> for Vector {
     fn mul_assign(&mut self, rhs: &f64) {
         self.x = self.x * rhs;
         self.y = self.y * rhs;
+    }
+}
+
+impl Neg for Vector {
+    type Output = Vector;
+    fn neg(self) -> Self::Output {
+        Vector::new(-self.x, -self.y)
     }
 }
 
