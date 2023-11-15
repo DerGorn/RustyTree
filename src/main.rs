@@ -13,12 +13,12 @@ fn reset_background_buffer(buffer: &mut Renderer) {
     buffer.clear(0);
 
     let (a, b) = (
-        (buffer.get_width() as f64 * 0.33) as u32,
-        (buffer.get_height() as f64 * 0.33) as u32,
+        (buffer.get_width() as f64 * 0.35) as u32,
+        (buffer.get_height() as f64 * 0.35) as u32,
     );
 
     let center = Vector::zero();
-    for deg in (0..180).step_by(1) {
+    for deg in (0..=180).step_by(1) {
         let deg = deg as f64;
         buffer.set_draw_color(Color::new_hsva(
             (deg * 255.0 / 180.0).round() as u8,
@@ -26,7 +26,7 @@ fn reset_background_buffer(buffer: &mut Renderer) {
             255,
             100,
         ));
-        buffer.draw_rect(&center, a * 2, b * 2, deg);
+        buffer.draw_rect(&center, a *2, b *2, deg);
         // buffer.draw_ellipse(&center, a, b, deg);
     }
     // buffer.draw_ellipse(&center, a, b, deg);

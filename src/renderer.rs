@@ -4,6 +4,27 @@ use crate::{canvas::Drawable, Camera, Canvas, Position, Res, Vector};
 
 const DEBUG: bool = false;
 
+fn clamp_point_along_edge(point: &Vector, edge: &Vector, is_point_edge_origin: bool) -> Option<Vector> {
+    let mut delta = {
+        let y_delta = point.y / edge.y;
+        let x_delta = point.x / edge.x;
+
+    y_delta.max(x_delta)
+    }; 
+    if delta < 0.0 || delta > 1.0 {
+        return None;
+    }
+    if !is_point_edge_origin {
+        delta *= -1.0;
+    }
+    let clamped_point = point + delta * edge;
+    if clamped_point.y > 0.0 && clamped_point.x > 0.0 {
+        Some(clamped_point)
+    } else {
+        None
+    }
+}
+
 pub struct Renderer {
     pub camera: Camera,
     pub canvas: Canvas,
@@ -222,31 +243,21 @@ impl Renderer {
         let mut bottom_of_left_edge = bottom_left_projection.clone();
         if bottom_left_projection.y < 0.0 || bottom_left_projection.x < 0.0 {
             if draw_bottom_edge {
-                let y_delta = 1.0 - bottom_left_projection.y / bottom_edge.y;
-                let x_delta = 1.0 - bottom_left_projection.x / bottom_edge.x;
-                //TODO: MAY BE BAD TO CLAMP
-                let delta = y_delta.min(x_delta).clamp(0.0, 1.0);
-                // println!(
-                //     "\n\ny_delta: {}\nx_delta: {}\ndelta: {}",
-                //     y_delta, x_delta, delta
-                // );
-                let left_of_bottom_edge = &bottom_right_projection + delta * bottom_edge;
-                if left_of_bottom_edge.y > 0.0 && left_of_bottom_edge.x > 0.0 {
+                match clamp_point_along_edge(&bottom_left_projection, &bottom_edge, false) {
+                    None => {}
+                    Some(left_of_bottom_edge) => 
                     self.canvas.draw_line(
                         &Position::from_vector(bottom_right_projection.clone()),
                         &Position::from_vector(left_of_bottom_edge),
-                    );
+                    )
                 }
                 draw_bottom_edge = false;
             }
             if draw_left_edge {
-                let y_delta = bottom_left_projection.y / left_edge.y;
-                let x_delta = bottom_left_projection.x / left_edge.x;
-                //TODO: MAY BE BAD TO CLAMP
-                let delta = y_delta.max(x_delta).clamp(0.0, 1.0);
-                bottom_of_left_edge = &bottom_left_projection + delta * &left_edge;
-                if bottom_of_left_edge.x < 0.0 || bottom_of_left_edge.y < 0.0 {
-                    draw_left_edge = false;
+                match clamp_point_along_edge(&bottom_left_projection, &left_edge, true) {
+                    None => draw_left_edge = false,
+                    Some(bottom_of_edge) => 
+                    bottom_of_left_edge = bottom_of_edge
                 }
             }
         }
@@ -254,57 +265,45 @@ impl Renderer {
         let mut right_of_top_edge = top_right_projection.clone();
         if top_right_projection.y < 0.0 || top_right_projection.x < 0.0 {
             if draw_right_edge {
-                let y_delta = 1.0 - top_right_projection.y / right_edge.y;
-                let x_delta = 1.0 - top_right_projection.x / right_edge.x;
-                //TODO: MAY BE BAD TO CLAMP
-                let delta = y_delta.max(x_delta).clamp(0.0, 1.0);
-                let top_of_right_edge = &bottom_right_projection + delta * right_edge;
-                if top_of_right_edge.x > 0.0 && top_of_right_edge.y > 0.0 {
+                match clamp_point_along_edge(&top_right_projection, &right_edge, false) {
+                    None => {}
+                    Some(top_of_right_edge) => 
                     self.canvas.draw_line(
                         &Position::from_vector(bottom_of_right_edge),
                         &Position::from_vector(top_of_right_edge),
-                    );
+                    )
                 }
                 draw_right_edge = false;
             }
             if draw_top_edge {
-                let y_delta = top_right_projection.y / top_edge.y;
-                let x_delta = top_right_projection.x / top_edge.x;
-                //TODO: MAY BE BAD TO CLAMP
-                let delta = y_delta.max(x_delta).clamp(0.0, 1.0);
-                right_of_top_edge = &top_right_projection + delta * &top_edge;
-                if right_of_top_edge.y < 0.0 || right_of_top_edge.x < 0.0 {
-                    draw_right_edge = false;
+                match clamp_point_along_edge(&top_right_projection, &top_edge, true) {
+                    None => draw_top_edge = false,
+                    Some(right_of_edge) => 
+                    right_of_top_edge = right_of_edge
                 }
             }
         }
 
         if top_left_projection.y < 0.0 || top_left_projection.x < 0.0 {
             if draw_left_edge {
-                let y_delta = 1.0 - top_left_projection.y / left_edge.y;
-                let x_delta = 1.0 - top_left_projection.x / left_edge.x;
-                //TODO: MAY BE BAD TO CLAMP
-                let delta = y_delta.max(x_delta).clamp(0.0, 1.0);
-                let top_of_left_edge = &bottom_left_projection + delta * left_edge;
-                if top_of_left_edge.y > 0.0 && top_of_left_edge.x > 0.0 {
+                match clamp_point_along_edge(&top_left_projection, &left_edge, false) {
+                    None => {}
+                    Some(top_of_left_edge) => 
                     self.canvas.draw_line(
                         &Position::from_vector(bottom_of_left_edge),
                         &Position::from_vector(top_of_left_edge),
-                    );
+                    )
                 }
                 draw_left_edge = false;
             }
             if draw_top_edge {
-                let y_delta = 1.0 - top_left_projection.y / top_edge.y;
-                let x_delta = 1.0 - top_left_projection.x / top_edge.x;
-                //TODO: MAY BE BAD TO CLAMP
-                let delta = y_delta.max(x_delta).clamp(0.0, 1.0);
-                let left_of_top_edge = &top_right_projection + delta * top_edge;
-                if left_of_top_edge.y > 0.0 && left_of_top_edge.x > 0.0 {
+                match clamp_point_along_edge(&top_left_projection, &top_edge, false) {
+                    None => {}
+                    Some(left_of_top_edge) => 
                     self.canvas.draw_line(
-                        &Position::from_vector(left_of_top_edge),
                         &Position::from_vector(right_of_top_edge),
-                    );
+                        &Position::from_vector(left_of_top_edge),
+                    )
                 }
                 draw_top_edge = false;
             }
@@ -316,6 +315,12 @@ impl Renderer {
                 &Position::from_vector(bottom_left_projection.clone()),
             );
         }
+        if draw_right_edge {
+            self.canvas.draw_line(
+                &Position::from_vector(bottom_right_projection.clone()),
+                &Position::from_vector(top_right_projection.clone()),
+            );
+        }
         if draw_left_edge {
             self.canvas.draw_line(
                 &Position::from_vector(top_left_projection.clone()),
@@ -325,12 +330,6 @@ impl Renderer {
         if draw_top_edge {
             self.canvas.draw_line(
                 &Position::from_vector(top_left_projection.clone()),
-                &Position::from_vector(top_right_projection.clone()),
-            );
-        }
-        if draw_right_edge {
-            self.canvas.draw_line(
-                &Position::from_vector(bottom_right_projection.clone()),
                 &Position::from_vector(top_right_projection.clone()),
             );
         }
