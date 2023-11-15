@@ -22,6 +22,10 @@ impl Vector {
     pub fn length(&self) -> f64 {
         self * self
     }
+
+    pub fn round(&self) -> Self {
+        Self::new(self.x.round(), self.y.round())
+    }
 }
 
 impl PartialEq for Vector {

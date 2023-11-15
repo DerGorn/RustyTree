@@ -4,24 +4,35 @@ use crate::{canvas::Drawable, Camera, Canvas, Position, Res, Vector};
 
 const DEBUG: bool = false;
 
-fn clamp_point_along_edge(point: &Vector, edge: &Vector, is_point_edge_origin: bool) -> Option<Vector> {
-    let mut delta = {
-        let y_delta = point.y / edge.y;
-        let x_delta = point.x / edge.x;
+impl Vector {
+    /// Clamps a point into positive space while following edge
+    ///
+    /// returns false if self cannot be clamped along the edge
+    fn clamp_point_along_edge(&mut self, edge: &Vector, is_point_edge_origin: bool) -> bool {
+        println!(
+            "self: {}\nedge: {}\nis_point_origin: {}",
+            self, edge, is_point_edge_origin
+        );
+        let mut delta = {
+            let y_delta = self.y / edge.y;
+            let x_delta = self.x / edge.x;
 
-    y_delta.max(x_delta)
-    }; 
-    if delta < 0.0 || delta > 1.0 {
-        return None;
-    }
-    if !is_point_edge_origin {
-        delta *= -1.0;
-    }
-    let clamped_point = point + delta * edge;
-    if clamped_point.y > 0.0 && clamped_point.x > 0.0 {
-        Some(clamped_point)
-    } else {
-        None
+            y_delta.max(x_delta)
+        };
+        println!("delta: {}", delta);
+        if delta < 0.0 || delta > 1.0 {
+            return false;
+        }
+        if !is_point_edge_origin {
+            delta *= -1.0;
+        }
+        *self += delta * edge;
+        *self = self.round();
+        if self.y >= 0.0 && self.x >= 0.0 {
+            true
+        } else {
+            false
+        }
     }
 }
 
@@ -211,24 +222,25 @@ impl Renderer {
             );
         }
 
-        let mut draw_bottom_edge = true;
+        let mut draw_bottom_edge = false;
         let mut draw_left_edge = true;
-        let mut draw_top_edge = true;
-        let mut draw_right_edge = true;
+        let mut draw_top_edge = false;
+        let mut draw_right_edge = false;
 
         let bottom_edge = &bottom_left_projection - &bottom_right_projection;
         let right_edge = &top_right_projection - &bottom_right_projection;
         let left_edge = &top_left_projection - &bottom_left_projection;
         let top_edge = &top_left_projection - &top_right_projection;
 
+        let right_of_bottom_edge = bottom_right_projection.clone();
         let bottom_of_right_edge = if bottom_right_projection.x < 0.0 {
             //RECTANGLE IS COMPLETELY OFF SCREEN
             if top_right_projection.x < 0.0 {
                 return;
             }
-            if top_left_projection.x < 0.0 {
-                draw_left_edge = false;
-            }
+            // if top_left_projection.x < 0.0 {
+            //     draw_left_edge = false;
+            // }
             draw_bottom_edge = false;
 
             let delta = bottom_right_projection.x / right_edge.x;
@@ -240,230 +252,69 @@ impl Renderer {
             draw_right_edge = false;
         }
 
+        let mut left_of_bottom_edge = bottom_left_projection.clone();
         let mut bottom_of_left_edge = bottom_left_projection.clone();
         if bottom_left_projection.y < 0.0 || bottom_left_projection.x < 0.0 {
             if draw_bottom_edge {
-                match clamp_point_along_edge(&bottom_left_projection, &bottom_edge, false) {
-                    None => {}
-                    Some(left_of_bottom_edge) => 
-                    self.canvas.draw_line(
-                        &Position::from_vector(bottom_right_projection.clone()),
-                        &Position::from_vector(left_of_bottom_edge),
-                    )
-                }
-                draw_bottom_edge = false;
+                draw_bottom_edge = left_of_bottom_edge.clamp_point_along_edge(&bottom_edge, false);
             }
             if draw_left_edge {
-                match clamp_point_along_edge(&bottom_left_projection, &left_edge, true) {
-                    None => draw_left_edge = false,
-                    Some(bottom_of_edge) => 
-                    bottom_of_left_edge = bottom_of_edge
-                }
+                draw_left_edge = bottom_of_left_edge.clamp_point_along_edge(&left_edge, true);
             }
         }
 
+        let mut top_of_right_edge = top_right_projection.clone();
         let mut right_of_top_edge = top_right_projection.clone();
         if top_right_projection.y < 0.0 || top_right_projection.x < 0.0 {
             if draw_right_edge {
-                match clamp_point_along_edge(&top_right_projection, &right_edge, false) {
-                    None => {}
-                    Some(top_of_right_edge) => 
-                    self.canvas.draw_line(
-                        &Position::from_vector(bottom_of_right_edge),
-                        &Position::from_vector(top_of_right_edge),
-                    )
-                }
-                draw_right_edge = false;
+                draw_right_edge = top_of_right_edge.clamp_point_along_edge(&right_edge, false);
             }
             if draw_top_edge {
-                match clamp_point_along_edge(&top_right_projection, &top_edge, true) {
-                    None => draw_top_edge = false,
-                    Some(right_of_edge) => 
-                    right_of_top_edge = right_of_edge
-                }
+                draw_top_edge = right_of_top_edge.clamp_point_along_edge(&top_edge, true);
             }
         }
 
+        let mut top_of_left_edge = top_left_projection.clone();
+        let mut left_of_top_edge = top_left_projection.clone();
         if top_left_projection.y < 0.0 || top_left_projection.x < 0.0 {
             if draw_left_edge {
-                match clamp_point_along_edge(&top_left_projection, &left_edge, false) {
-                    None => {}
-                    Some(top_of_left_edge) => 
-                    self.canvas.draw_line(
-                        &Position::from_vector(bottom_of_left_edge),
-                        &Position::from_vector(top_of_left_edge),
-                    )
-                }
-                draw_left_edge = false;
+                draw_left_edge = top_of_left_edge.clamp_point_along_edge(&left_edge, false);
             }
             if draw_top_edge {
-                match clamp_point_along_edge(&top_left_projection, &top_edge, false) {
-                    None => {}
-                    Some(left_of_top_edge) => 
-                    self.canvas.draw_line(
-                        &Position::from_vector(right_of_top_edge),
-                        &Position::from_vector(left_of_top_edge),
-                    )
-                }
-                draw_top_edge = false;
+                draw_top_edge = left_of_top_edge.clamp_point_along_edge(&top_edge, false);
             }
         }
 
         if draw_bottom_edge {
             self.canvas.draw_line(
-                &Position::from_vector(bottom_right_projection.clone()),
-                &Position::from_vector(bottom_left_projection.clone()),
+                &Position::from_vector(right_of_bottom_edge),
+                &Position::from_vector(left_of_bottom_edge),
             );
         }
         if draw_right_edge {
             self.canvas.draw_line(
-                &Position::from_vector(bottom_right_projection.clone()),
-                &Position::from_vector(top_right_projection.clone()),
+                &Position::from_vector(bottom_of_right_edge),
+                &Position::from_vector(top_of_right_edge),
             );
         }
         if draw_left_edge {
             self.canvas.draw_line(
-                &Position::from_vector(top_left_projection.clone()),
-                &Position::from_vector(bottom_left_projection.clone()),
+                &Position::from_vector(top_of_left_edge),
+                &Position::from_vector(bottom_of_left_edge),
+            );
+        } else {
+            println!(
+                "\n\ntop_of_left_edge: {}\nbottom_of_left_edge: {}",
+                top_of_left_edge, bottom_of_left_edge
             );
         }
         if draw_top_edge {
             self.canvas.draw_line(
-                &Position::from_vector(top_left_projection.clone()),
-                &Position::from_vector(top_right_projection.clone()),
+                &Position::from_vector(left_of_top_edge),
+                &Position::from_vector(right_of_top_edge),
             );
         }
     }
-    // pub fn draw_rect(&mut self, center: &Vector, width: u32, height: u32, angel_degree: f64) {
-    //     let w = width as f64 / 2.0;
-    //     let h = height as f64 / 2.0;
-
-    //     let alpha = angel_degree % 360.0;
-    //     let quarter_turns = (alpha / 90.0).floor();
-    //     let angel_degree = alpha - quarter_turns * 90.0;
-
-    //     let (w, h) = if quarter_turns % 2.0 == 1.0 {
-    //         (h, w)
-    //     } else {
-    //         (w, h)
-    //     };
-
-    //     println!("\n\ncenter: {}\n", center);
-    //     println!("w: {}\nh: {}\nangel_degree: {}\n", w, h, angel_degree);
-    //     let main_diagonal = Vector::new(w, h);
-    //     let off_diagonal = Vector::new(-w, h);
-    //     println!(
-    //         "main_diagonal: {}\noff_diagonal: {}\n",
-    //         main_diagonal, off_diagonal
-    //     );
-
-    //     //Vectors to the corners
-    //     let top_left = (center - &main_diagonal).rotate_degree(angel_degree);
-    //     let top_right = (center - &off_diagonal).rotate_degree(angel_degree);
-    //     let bottom_left = (center + &off_diagonal).rotate_degree(angel_degree);
-    //     let bottom_right = (center + &main_diagonal).rotate_degree(angel_degree);
-
-    //     //Vectors to the corners in buffer world
-    //     let top_left_projection = self.camera.project(&top_left);
-    //     let top_right_projection = self.camera.project(&top_right);
-    //     let bottom_right_projection = self.camera.project(&bottom_right);
-    //     let bottom_left_projection = self.camera.project(&bottom_left);
-
-    //     println!(
-    //         "bottom_left: {}\nbottom_left_projection: {}\nbottom_right: {}\nbottom_right_projection: {}\ntop_right: {}\ntop_right_projection: {}\ntop_left: {}\ntop_left_projection: {}\n",
-    //         bottom_left, bottom_left_projection,bottom_right, bottom_right_projection,top_right, top_right_projection,top_left, top_left_projection
-    //     );
-
-    //     //Constant anker, because buffer overflow in positive direction is no problem, but in negativ direction everything and everybody dies
-    //     let bottom_right = Position::from_vector(bottom_right_projection.clone());
-
-    //     //edges
-    //     let mut right = &top_right_projection - &bottom_right_projection;
-    //     let mut bottom = &bottom_left_projection - &bottom_right_projection;
-    //     let mut left = &top_left_projection - &bottom_left_projection;
-    //     let mut top = &top_left_projection - &top_right_projection;
-
-    //     println!(
-    //         "Initial edges:\nleft: {}\nright: {}\ntop: {}\nbottom: {}\n",
-    //         left, right, top, bottom
-    //     );
-
-    //     let mut resized_sides = Vec::with_capacity(4);
-
-    //     //check neighbours of ourer anker (bottom_right) for negativ overflow and destroy it
-    //     if top_right_projection.y < 0.0 {
-    //         let delta = 1.0 - (top_right_projection.y / right.y).abs();
-    //         right *= delta;
-    //         resized_sides.push("right");
-    //     }
-    //     if bottom_left_projection.x < 0.0 {
-    //         let delta = 1.0 - (bottom_left_projection.x / bottom.x).abs();
-    //         bottom *= delta;
-    //         resized_sides.push("bottom");
-    //     }
-    //     if bottom_left_projection.y < 0.0 {
-    //         let delta = 1.0 - (bottom_left_projection.y / bottom.y).abs();
-    //         bottom *= delta;
-    //         resized_sides.push("bottom");
-    //     }
-
-    //     println!("Intermezzo: resized_sides: {:?}", resized_sides);
-    //     println!("bottom_right_projection: {}", bottom_right_projection);
-
-    //     let top_right_projection = &bottom_right_projection + &right;
-    //     println!("top_right_projection: {}", top_right_projection);
-    //     let top_right = Position::from_vector(top_right_projection.clone());
-
-    //     let bottom_left_projection = &bottom_right_projection + &bottom;
-    //     println!("bottom_left_projection: {}\n", bottom_left_projection);
-    //     let bottom_left = Position::from_vector(bottom_left_projection.clone());
-
-    //     self.canvas.draw_line(&bottom_right, &top_right);
-    //     self.canvas.draw_line(&bottom_right, &bottom_left);
-
-    //     if top_left_projection.y < 0.0 {
-    //         let left_delta = 1.0 - (top_left_projection.y / left.y).abs();
-    //         let top_delta = 1.0 - (top_left_projection.y / top.y).abs();
-    //         left *= left_delta;
-    //         top *= top_delta;
-    //         resized_sides.push("left");
-    //         println!("left_delta: {}", left_delta);
-    //         println!("resided: left: {}, top: {}", left, top);
-    //     }
-    //     if !resized_sides.contains(&"left") || !resized_sides.contains(&"right") {
-    //         let top_left_projection = &bottom_right_projection + &right + &top;
-    //         println!("top_left_projection: {}", top_left_projection);
-    //         let top_left = Position::from_vector(top_left_projection);
-    //         self.canvas.draw_line(&top_right, &top_left);
-    //     }
-
-    //     if top_left_projection.x < 0.0 {
-    //         let delta = 1.0 - (top_left_projection.x / top.x).abs();
-    //         top *= delta;
-    //         resized_sides.push("top");
-    //         println!("resized: top: {}", top);
-    //     }
-    //     if !resized_sides.contains(&"top") || !resized_sides.contains(&"bottom") {
-    //         let top_left_projection = &bottom_right_projection + &bottom + &left;
-    //         println!(
-    //             "top_left_projection: {} = {} + {} + {}",
-    //             top_left_projection, bottom_right_projection, bottom, left
-    //         );
-    //         let top_left = Position::from_vector(top_left_projection);
-    //         self.canvas.draw_line(&bottom_left, &top_left);
-    //     }
-
-    //     println!("\nRecap:");
-    //     println!("bottom_right: {}\ntop_right: {}", bottom_right, top_right);
-    //     println!("bottom_left: {}\ntop_left: {}", bottom_left, top_left);
-
-    //     // self.draw_line(&top_right, &top_left);
-    //     // self.draw_line(&top_right, &bottom_right);
-    //     // self.draw_line(&bottom_right, &bottom_left);
-    //     // self.draw_line(&bottom_left, &top_left);
-    //     // let origin = self.camera.project(&origin);
-    //     // self.canvas.draw_rect(&origin, width, height)
-    // }
 
     pub fn fill_rect(&mut self, origin: &Vector, width: u32, height: u32) {
         let origin = self.camera.clamped_projection_to_position(&origin);
