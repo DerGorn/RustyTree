@@ -9,17 +9,17 @@ impl Vector {
     ///
     /// returns false if self cannot be clamped along the edge
     fn clamp_point_along_edge(&mut self, edge: &Vector, is_point_edge_origin: bool) -> bool {
-        println!(
-            "self: {}\nedge: {}\nis_point_origin: {}",
-            self, edge, is_point_edge_origin
-        );
         let mut delta = {
             let y_delta = self.y / edge.y;
             let x_delta = self.x / edge.x;
-
-            y_delta.max(x_delta)
+            if x_delta > 1.0 {
+                y_delta
+            } else if y_delta > 1.0 {
+                x_delta
+            }else{
+                y_delta.max(x_delta)
+            }.abs()
         };
-        println!("delta: {}", delta);
         if delta < 0.0 || delta > 1.0 {
             return false;
         }
@@ -238,9 +238,9 @@ impl Renderer {
             if top_right_projection.x < 0.0 {
                 return;
             }
-            // if top_left_projection.x < 0.0 {
-            //     draw_left_edge = false;
-            // }
+            if top_left_projection.x < 0.0 {
+                draw_left_edge = false;
+            }
             draw_bottom_edge = false;
 
             let delta = bottom_right_projection.x / right_edge.x;
@@ -304,7 +304,7 @@ impl Renderer {
             );
         } else {
             println!(
-                "\n\ntop_of_left_edge: {}\nbottom_of_left_edge: {}",
+                "top_of_left_edge: {}\nbottom_of_left_edge: {}\n\n",
                 top_of_left_edge, bottom_of_left_edge
             );
         }

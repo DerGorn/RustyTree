@@ -13,8 +13,8 @@ fn reset_background_buffer(buffer: &mut Renderer) {
     buffer.clear(0);
 
     let (a, b) = (
-        (buffer.get_width() as f64 * 0.35) as u32,
-        (buffer.get_height() as f64 * 0.35) as u32,
+        (buffer.get_width() as f64 * 0.55) as u32,
+        (buffer.get_height() as f64 * 0.55) as u32,
     );
 
     let center = Vector::zero();
