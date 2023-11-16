@@ -9,18 +9,28 @@ impl Vector {
     ///
     /// returns false if self cannot be clamped along the edge
     fn clamp_point_along_edge(&mut self, edge: &Vector, is_point_edge_origin: bool) -> bool {
+        // let originial = self.clone();
         let mut delta = {
             let y_delta = self.y / edge.y;
             let x_delta = self.x / edge.x;
-            if x_delta > 1.0 {
+            if !is_point_edge_origin && self.x > 0.0 && edge.x > 0.0 && self.y < 0.0 && edge.y < 0.0
+            {
+                y_delta.min(x_delta)
+            } else if x_delta > 1.0 || x_delta < -1.0 {
                 y_delta
-            } else if y_delta > 1.0 {
+            } else if y_delta > 1.0 || y_delta < -1.0 {
                 x_delta
-            }else{
+            } else {
                 y_delta.max(x_delta)
-            }.abs()
+            }
+            .abs()
         };
         if delta < 0.0 || delta > 1.0 {
+            // println!("False because of delta:");
+            // println!(
+            //     "self: {}\nedge: {}\nis_point_edge_origin: {}\ndelta: {}",
+            //     self, edge, is_point_edge_origin, delta
+            // );
             return false;
         }
         if !is_point_edge_origin {
@@ -29,8 +39,17 @@ impl Vector {
         *self += delta * edge;
         *self = self.round();
         if self.y >= 0.0 && self.x >= 0.0 {
+            // println!(
+            //     "original_self: {}\nself: {}\nedge: {}\nis_point_edge_origin: {}\ndelta: {}",
+            //     originial, self, edge, is_point_edge_origin, delta
+            // );
             true
         } else {
+            // println!("False becaus of self out of bounds:");
+            // println!(
+            //     "original_self: {}\nself: {}\nedge: {}\nis_point_edge_origin: {}\ndelta: {}",
+            //     originial, self, edge, is_point_edge_origin, delta
+            // );
             false
         }
     }
@@ -107,8 +126,8 @@ impl Renderer {
     }
 
     pub fn fill_ellipse(&mut self, center: &Vector, a: u32, b: u32, angel_degree: f64) {
-        let mut a = a as f64 / 2.0;
-        let mut b = b as f64 / 2.0;
+        let mut a = a as f64;
+        let mut b = b as f64;
         let mut alpha = angel_degree;
 
         if a < b {
@@ -222,10 +241,10 @@ impl Renderer {
             );
         }
 
-        let mut draw_bottom_edge = false;
+        let mut draw_bottom_edge = true;
         let mut draw_left_edge = true;
-        let mut draw_top_edge = false;
-        let mut draw_right_edge = false;
+        let mut draw_top_edge = true;
+        let mut draw_right_edge = true;
 
         let bottom_edge = &bottom_left_projection - &bottom_right_projection;
         let right_edge = &top_right_projection - &bottom_right_projection;
@@ -233,7 +252,8 @@ impl Renderer {
         let top_edge = &top_left_projection - &top_right_projection;
 
         let right_of_bottom_edge = bottom_right_projection.clone();
-        let bottom_of_right_edge = if bottom_right_projection.x < 0.0 {
+        let mut bottom_of_right_edge = bottom_right_projection.clone();
+        if bottom_right_projection.x < 0.0 {
             //RECTANGLE IS COMPLETELY OFF SCREEN
             if top_right_projection.x < 0.0 {
                 return;
@@ -243,13 +263,9 @@ impl Renderer {
             }
             draw_bottom_edge = false;
 
-            let delta = bottom_right_projection.x / right_edge.x;
-            &bottom_right_projection + delta * &right_edge
-        } else {
-            bottom_right_projection.clone()
-        };
-        if bottom_of_right_edge.x < 0.0 || bottom_of_right_edge.y < 0.0 {
-            draw_right_edge = false;
+            if draw_right_edge {
+                draw_right_edge = bottom_of_right_edge.clamp_point_along_edge(&right_edge, true);
+            }
         }
 
         let mut left_of_bottom_edge = bottom_left_projection.clone();
@@ -296,17 +312,26 @@ impl Renderer {
                 &Position::from_vector(bottom_of_right_edge),
                 &Position::from_vector(top_of_right_edge),
             );
+        } else {
+            // println!(
+            //     "top_of_right_edge: {}\nbottom_of_right_edge: {}\n\n",
+            //     top_of_right_edge, bottom_of_right_edge
+            // );
         }
         if draw_left_edge {
+            // println!(
+            //     "top_of_left_edge: {}\nbottom_of_left_edge: {}\n\n",
+            //     top_of_left_edge, bottom_of_left_edge
+            // );
             self.canvas.draw_line(
                 &Position::from_vector(top_of_left_edge),
                 &Position::from_vector(bottom_of_left_edge),
             );
         } else {
-            println!(
-                "top_of_left_edge: {}\nbottom_of_left_edge: {}\n\n",
-                top_of_left_edge, bottom_of_left_edge
-            );
+            // println!(
+            //     "top_of_left_edge: {}\nbottom_of_left_edge: {}\n\n",
+            //     top_of_left_edge, bottom_of_left_edge
+            // );
         }
         if draw_top_edge {
             self.canvas.draw_line(

@@ -1,6 +1,6 @@
 # RustyTree
 ![THE Test image](examples/Test.png)
-A simple 2D Canvas Api based on pixels and winit.
+A simple 2D Canvas Api based on the `pixels` and `winit` crates.
 
 # Examples
 
@@ -28,27 +28,7 @@ A simple 2D Canvas Api based on pixels and winit.
 ![Beautiful Ellipses](examples/RotatedEllipses.png)
 
 ## Defect Rectangles
-Created by imperfections in the `draw_rect` function
-```
-    buffer.clear(0);
-
-    let (a, b) = (
-        (buffer.get_width() as f64 * 0.23) as u32,
-        (buffer.get_height() as f64 * 0.23) as u32,
-    );
-
-    let center = Vector::zero();
-    for deg in (0..360).step_by(2) {
-        let deg = deg as f64;
-        buffer.set_draw_color(Color::new_hsva(
-            (deg * 255.0 / 360.0).round() as u8,
-            255,
-            255,
-            100,
-        ));
-        buffer.draw_rect(&center, a * 2, b * 2, deg);
-    }
-```
+Created by imperfections in the `Renderer::draw_rect` function during develepoment. Rectangles with specific rotation angles just disappeared.
 ![Defect Rectangles](examples/DefectRectangles.png)
 
 ## Filled Ellipses
@@ -95,3 +75,31 @@ Created by imperfections in the `draw_rect` function
     }
 ```
 ![Ellipses and Rectangles](examples/RectsAndEllipses.png)
+
+## Rotation Collection
+```
+    buffer.clear(0);
+
+    let (a, b) = (
+        (buffer.get_width() as f64 * 0.35) as u32,
+        (buffer.get_height() as f64 * 0.35) as u32,
+    );
+
+    buffer.set_draw_color(Color::from_str("white"));
+    let center = Vector::zero();
+    for deg in (0..=180).step_by(5) {
+        let deg = deg as f64;
+        buffer.set_fill_color(Color::new_hsva(
+            (deg * 255.0 / 180.0).round() as u8,
+            255,
+            255,
+            20,
+        ));
+        buffer.fill_ellipse(&center, a, b, deg);
+        buffer.draw_ellipse(&center, a, b, deg);
+        buffer.draw_rect(&center, a, b, deg);
+    }
+    buffer.set_fill_color(Color::from_str("whine_red"));
+    buffer.fill_ellipse(&center, a / 3, a / 3, 0.0);
+```
+![Rotation Collection](examples/FruitsOfMyLabour.png)

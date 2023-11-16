@@ -42,7 +42,7 @@ impl SimpleBuffer {
         }
     }
 
-    pub fn get_pixel(&mut self, x: usize, y: usize) -> Res<&mut [u8; 4]> {
+    fn get_pixel(&mut self, x: usize, y: usize) -> Res<&mut [u8; 4]> {
         let index = (self.width as usize * y + x) * 4;
         match self.buffer.get_mut(index..index + 4) {
             None => Err(format!(

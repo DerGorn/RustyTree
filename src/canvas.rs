@@ -76,7 +76,16 @@ impl Canvas {
         let color = if color[3] != 255 {
             Color::rgba_from_slice(&color)
                 .blend(&Color::rgba_from_slice(
-                    buffer.get(index..=index + 3).unwrap().try_into().unwrap(),
+                    match buffer.get(index..=index + 3) {
+                        None => panic!(
+                            "Index out of bounds. Buffer is only {} bytes big, but index is {}",
+                            buffer.len(),
+                            index
+                        ),
+                        Some(pixel) => pixel,
+                    }
+                    .try_into()
+                    .unwrap(),
                 ))
                 .to_slice()
         } else {
