@@ -13,13 +13,13 @@ fn reset_background_buffer(buffer: &mut Renderer) {
     buffer.clear(0);
 
     let (a, b) = (
-        (buffer.get_width() as f64 * 0.35) as u32,
-        (buffer.get_height() as f64 * 0.35) as u32,
+        (buffer.get_width() as f64 * 0.25) as u32,
+        (buffer.get_height() as f64 * 0.25) as u32,
     );
 
-    buffer.set_draw_color(Color::from_str("white"));
+    buffer.set_draw_color(Color::from_str("red"));
     let center = Vector::zero();
-    for deg in (0..=180).step_by(5) {
+    for deg in (0..=180).step_by(10) {
         let deg = deg as f64;
         buffer.set_fill_color(Color::new_hsva(
             (deg * 255.0 / 180.0).round() as u8,
@@ -27,38 +27,8 @@ fn reset_background_buffer(buffer: &mut Renderer) {
             255,
             20,
         ));
-        buffer.fill_ellipse(&center, a, b, deg);
-        // buffer.draw_ellipse(&center, a, b, deg);
-        // buffer.draw_rect(&center, a, b, deg);
+        buffer.fill_rect(&center, a*2, b*2, deg);
     }
-    buffer.set_fill_color(Color::from_str("whine_red"));
-    buffer.fill_ellipse(&center, a / 3, a / 3, 0.0);
-    // buffer.draw_ellipse(&center, a, b, deg);
-    // buffer.set_draw_color(Color::from_str("white"));
-    // buffer.draw_rect(&center, a * 2, b * 2, 0.0);
-    // buffer.draw_ellipse(&center, a, b, 0.0);
-    // buffer.set_draw_color(Color::from_str("red"));
-    // buffer.draw_rect(&center, a * 2, b * 2, 95.0);
-    // buffer.draw_ellipse(&center, a, b, 95.0);
-    // buffer.set_draw_color(Color::from_str("green"));
-    // buffer.draw_rect(&center, a * 2, b * 2, 190.0);
-    // buffer.draw_ellipse(&center, a, b, 190.0);
-    // buffer.set_draw_color(Color::from_str("blue"));
-    // buffer.draw_rect(&center, b * 2, a * 2, 10.0);
-    // buffer.draw_ellipse(&center, b, a, 10.0);
-    // buffer.set_draw_color(Color::from_str("whine_red"));
-    // buffer.draw_rect(&center, a * 2, b * 2, -271.0);
-    // buffer.draw_ellipse(&center, a, b, -271.0);
-    // buffer.set_fill_color(Color::from_str("blue"));
-    // buffer.fill_ellipse_old(&center, 200, 300, 200.0);
-    // buffer.set_fill_color(Color::from_str("whine_red"));
-    // buffer.fill_ellipse(&center, 200, 300, 110.0);
-    // buffer.set_fill_color(Color::new_rgba(255, 255, 255, 100));
-    // buffer.fill_ellipse(&center, 150, 250, 110.0);
-    // buffer.set_fill_color(Color::new_rgba(0, 0, 255, 100));
-    // buffer.fill_ellipse(&center, 300, 200, 110.0);
-    // buffer.set_draw_color(Color::from_str("purple"));
-    // buffer.draw_ellipse(&center, a, b, 380.0);
 }
 
 struct Point {

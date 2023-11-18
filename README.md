@@ -103,3 +103,27 @@ Created by imperfections in the `Renderer::draw_rect` function during develepome
     buffer.fill_ellipse(&center, a / 3, a / 3, 0.0);
 ```
 ![Rotation Collection](examples/FruitsOfMyLabour.png)
+
+## Filled Rectangles
+```
+    buffer.clear(0);
+
+    let (a, b) = (
+        (buffer.get_width() as f64 * 0.25) as u32,
+        (buffer.get_height() as f64 * 0.25) as u32,
+    );
+
+    buffer.set_draw_color(Color::from_str("red"));
+    let center = Vector::zero();
+    for deg in (0..=180).step_by(10) {
+        let deg = deg as f64;
+        buffer.set_fill_color(Color::new_hsva(
+            (deg * 255.0 / 180.0).round() as u8,
+            255,
+            255,
+            20,
+        ));
+        buffer.fill_rect(&center, a*2, b*2, deg);
+    }
+```
+![Filled Rectangles](examples/FilledRectangles.png)

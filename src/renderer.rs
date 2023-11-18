@@ -2,8 +2,6 @@ use winit::dpi::PhysicalSize;
 
 use crate::{canvas::Drawable, Camera, Canvas, Position, Res, Vector};
 
-const DEBUG: bool = false;
-
 impl Vector {
     /// Clamps a point into positive space while following edge
     ///
@@ -167,28 +165,31 @@ impl Renderer {
     }
 
     pub fn draw_line(&mut self, start: &Vector, end: &Vector) {
-        let start = self.camera.clamped_projection_to_position(&start);
-        let end = self.camera.clamped_projection_to_position(&end);
-        self.canvas.draw_line(&start, &end)
+        let mut start_projection = self.camera.project(&start);
+        let mut end_projection = self.camera.project(&end);
+        let edge = &end_projection - &start_projection;
+        let mut draw_line = true;
+        if start_projection.x < 0.0 || start_projection.y < 0.0 {
+            draw_line = start_projection.clamp_point_along_edge(&edge, true)
+        };
+        if draw_line && (end_projection.x < 0.0 || end_projection.y < 0.0) {
+            draw_line = end_projection.clamp_point_along_edge(&edge, false)
+        };
+        if draw_line {
+            self.canvas.draw_line(
+                &Position::from_vector(start_projection),
+                &Position::from_vector(end_projection),
+            );
+        }
     }
 
     pub fn draw_rect(&mut self, center: &Vector, width: u32, height: u32, angel_degree: f64) {
-        if DEBUG {
-            println!(
-                "\n\n--------------New Rectangle-------------\ncenter: {}\n",
-                center
-            );
-        }
         let w = width as f64 / 2.0;
         let h = height as f64 / 2.0;
 
         let alpha = angel_degree % 360.0;
         let quarter_turns = (alpha / 90.0).floor();
         let alpha = alpha - quarter_turns * 90.0;
-
-        if DEBUG {
-            println!("quarter_turns: {}\nalpha: {}\n", quarter_turns, alpha);
-        }
 
         let (w, h) = if quarter_turns % 2.0 == 1.0 {
             (h, w)
@@ -199,25 +200,11 @@ impl Renderer {
         let main_diagonal = Vector::new(w, h);
         let off_diagonal = Vector::new(-w, h);
 
-        if DEBUG {
-            println!(
-                "main_diagonal: {}\noff_diagonal: {}\n",
-                main_diagonal, off_diagonal
-            );
-        }
-
         //Basic Corners
         let bottom_right = (center + &main_diagonal).rotate_degree(alpha);
         let top_left = (center - &main_diagonal).rotate_degree(alpha);
         let bottom_left = (center + &off_diagonal).rotate_degree(alpha);
         let top_right = (center - &off_diagonal).rotate_degree(alpha);
-
-        if DEBUG {
-            println!(
-                "bottom_right: {}\nbottom_left: {}\ntop_left: {}\ntop_right: {}\n",
-                bottom_right, bottom_left, top_left, top_right
-            );
-        }
 
         //Projected Corners into Bufferspace
         let bottom_right_projection = self.camera.project(&bottom_right);
@@ -228,17 +215,6 @@ impl Renderer {
         //RECTANGLE IS COMPLETELY OFF SCREEN
         if bottom_right_projection.y < 0.0 {
             return;
-        }
-
-        if DEBUG {
-            println!("Projected into Bufferspace:");
-            println!(
-                "bottom_right: {}\nbottom_left: {}\ntop_left: {}\ntop_right: {}\n",
-                bottom_right_projection,
-                bottom_left_projection,
-                top_left_projection,
-                top_right_projection
-            );
         }
 
         let mut draw_bottom_edge = true;
@@ -312,26 +288,12 @@ impl Renderer {
                 &Position::from_vector(bottom_of_right_edge),
                 &Position::from_vector(top_of_right_edge),
             );
-        } else {
-            // println!(
-            //     "top_of_right_edge: {}\nbottom_of_right_edge: {}\n\n",
-            //     top_of_right_edge, bottom_of_right_edge
-            // );
         }
         if draw_left_edge {
-            // println!(
-            //     "top_of_left_edge: {}\nbottom_of_left_edge: {}\n\n",
-            //     top_of_left_edge, bottom_of_left_edge
-            // );
             self.canvas.draw_line(
                 &Position::from_vector(top_of_left_edge),
                 &Position::from_vector(bottom_of_left_edge),
             );
-        } else {
-            // println!(
-            //     "top_of_left_edge: {}\nbottom_of_left_edge: {}\n\n",
-            //     top_of_left_edge, bottom_of_left_edge
-            // );
         }
         if draw_top_edge {
             self.canvas.draw_line(
@@ -341,9 +303,91 @@ impl Renderer {
         }
     }
 
-    pub fn fill_rect(&mut self, origin: &Vector, width: u32, height: u32) {
-        let origin = self.camera.clamped_projection_to_position(&origin);
-        self.canvas.fill_rect(&origin, width, height)
+    pub fn fill_rect(&mut self, center: &Vector, width: u32, height: u32, angel_degree: f64) {
+        let w = width as f64 / 2.0;
+        let h = height as f64 / 2.0;
+
+        let alpha = angel_degree % 360.0;
+        let quarter_turns = (alpha / 90.0).floor();
+        let alpha = alpha - quarter_turns * 90.0;
+
+        let (w, h) = if quarter_turns % 2.0 == 1.0 {
+            (h, w)
+        } else {
+            (w, h)
+        };
+
+        let main_diagonal = Vector::new(w, h);
+        let off_diagonal = Vector::new(-w, h);
+
+        //Basic Corners
+        let bottom_right = (center + &main_diagonal).rotate_degree(alpha);
+        let top_left = (center - &main_diagonal).rotate_degree(alpha);
+        let bottom_left = (center + &off_diagonal).rotate_degree(alpha);
+        let top_right = (center - &off_diagonal).rotate_degree(alpha);
+
+        //Projected Corners into Bufferspace
+        let bottom_right_projection = self.camera.project(&bottom_right);
+        let bottom_left_projection = self.camera.project(&bottom_left);
+        let top_left_projection = self.camera.project(&top_left);
+        let top_right_projection = self.camera.project(&top_right);
+
+        //RECTANGLE IS COMPLETELY OFF SCREEN
+        if bottom_right_projection.y < 0.0
+            || (bottom_right_projection.x < 0.0 && top_right_projection.x < 0.0)
+        {
+            return;
+        }
+
+        let left_of_top = &top_left_projection - &bottom_left_projection;
+        let mut left_top_slope = left_of_top.y / left_of_top.x;
+        if left_top_slope.is_infinite() {
+            left_top_slope = 0.0;
+        }
+        let right_of_top = &top_right_projection - &top_left_projection;
+        let mut right_top_slope = right_of_top.y / right_of_top.x;
+        if right_top_slope.is_infinite() {
+            right_top_slope = 0.0;
+        }
+
+        let x_min = bottom_left_projection.x.max(0.0) as u32;
+        let x_max = top_right_projection.x.min(self.get_width() as f64 - 1.0) as u32;
+
+        let y_min = |x: f64| -> u32 {
+            let y_min = if x < top_left_projection.x {
+                let x = x - x_min as f64;
+                bottom_left_projection.y + x * left_top_slope
+            } else if x > top_left_projection.x {
+                let x = x - top_left_projection.x as f64;
+                top_left_projection.y + x * right_top_slope
+            } else {
+                top_left_projection.y
+            }
+            .max(0.0) as u32;
+            y_min
+        };
+
+        let height = self.get_height() as f64 - 1.0;
+        let y_max = |x: f64| -> u32 {
+            if x < bottom_right_projection.x {
+                let x = x - x_min as f64;
+                bottom_left_projection.y + x * right_top_slope
+            } else if x > bottom_right_projection.x {
+                let x = x - bottom_right_projection.x;
+                bottom_right_projection.y + x * left_top_slope
+            } else {
+                bottom_right_projection.y
+            }
+            .min(height) as u32
+        };
+
+        let color = self.canvas.get_fill_color();
+
+        for x in x_min..=x_max {
+            for y in y_min(x as f64)..=y_max(x as f64) {
+                self.canvas.set_pixel(&Position::new(x, y), color.clone());
+            }
+        }
     }
 
     pub fn set_pixel(&mut self, position: &Vector, color: crate::Color) {
