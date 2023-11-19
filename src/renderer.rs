@@ -1,6 +1,7 @@
-use winit::dpi::PhysicalSize;
-
-use crate::{canvas::Drawable, Camera, Canvas, Position, Res, Vector};
+use crate::{
+    camera::Camera, canvas::Canvas, canvas::Drawable, color::Color, math_2d::Vector,
+    position::Position, Res, PhysicalSize,
+};
 
 impl Vector {
     /// Clamps a point into positive space while following edge
@@ -390,18 +391,18 @@ impl Renderer {
         }
     }
 
-    pub fn set_pixel(&mut self, position: &Vector, color: crate::Color) {
+    pub fn set_pixel(&mut self, position: &Vector, color: Color) {
         let position = self.camera.clamped_projection_to_position(&position);
         if position.x < self.get_width() && position.y < self.get_height() {
             self.canvas.set_pixel(&position, color)
         }
     }
 
-    pub fn set_draw_color(&mut self, color: crate::Color) {
+    pub fn set_draw_color(&mut self, color: Color) {
         self.canvas.set_draw_color(color.to_rgba())
     }
 
-    pub fn set_fill_color(&mut self, color: crate::Color) {
+    pub fn set_fill_color(&mut self, color: Color) {
         self.canvas.set_fill_color(color.to_rgba())
     }
 

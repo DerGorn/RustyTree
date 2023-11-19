@@ -1,28 +1,37 @@
 use std::error::Error;
 
-mod math_2d;
-pub use math_2d::Matrix;
-pub use math_2d::Vector;
+#[derive(Debug, Clone, Copy)]
+pub struct PhysicalSize<P> {
+    pub width: P,
+    pub height: P,
+}
+impl<P> PhysicalSize<P> {
+    pub fn new(width: P, height: P) -> Self {
+        Self { width, height }
+    }
+}
 
-mod color;
-pub use color::Color;
+pub mod math_2d;
 
-mod buffer;
-pub use buffer::Buffer;
+pub mod color;
 
-mod canvas;
-pub use canvas::Canvas;
-pub use canvas::Drawable;
+pub mod buffer;
 
-mod collision;
+pub mod canvas;
+
+pub mod collision;
 
 mod position;
-pub use position::Position;
 
-mod camera;
-pub use camera::Camera;
+pub mod camera;
 
-mod renderer;
-pub use renderer::Renderer;
+pub mod renderer;
+
+mod spatial_hashgrid;
+
+pub mod world;
+
+#[cfg(feature = "pixels")]
+pub mod pixels_integration;
 
 type Res<T, E = Box<dyn Error>> = Result<T, E>;

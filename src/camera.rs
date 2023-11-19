@@ -1,4 +1,5 @@
-use crate::{Position, Vector};
+use crate::{math_2d::Vector, position::Position};
+
 
 pub struct Camera {
     origin: Vector,

@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Vector {
     pub x: f64,
     pub y: f64,
@@ -20,11 +20,19 @@ impl Vector {
     }
 
     pub fn length(&self) -> f64 {
-        self * self
+        (self * self).sqrt()
+    }
+
+    pub fn distance(&self, other: &Vector) -> f64 {
+        (self - other).length()
     }
 
     pub fn round(&self) -> Self {
         Self::new(self.x.round(), self.y.round())
+    }
+
+    pub fn abs(&self) -> Self {
+        Self::new(self.x.abs(), self.y.abs())
     }
 }
 
@@ -186,7 +194,14 @@ impl MulAssign<&f64> for Vector {
     }
 }
 
+//Neg
 impl Neg for Vector {
+    type Output = Vector;
+    fn neg(self) -> Self::Output {
+        Vector::new(-self.x, -self.y)
+    }
+}
+impl Neg for &Vector {
     type Output = Vector;
     fn neg(self) -> Self::Output {
         Vector::new(-self.x, -self.y)
@@ -233,5 +248,171 @@ impl SubAssign<&Vector> for Vector {
     fn sub_assign(&mut self, rhs: &Vector) {
         self.x = self.x - rhs.x;
         self.y = self.y - rhs.y;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fmt::Write;
+
+    use crate::Res;
+
+    use super::*;
+
+    #[test]
+    fn new() {
+        assert_eq!(Vector::new(1.0, 2.0), Vector { x: 1.0, y: 2.0 })
+    }
+
+    #[test]
+    pub fn zero() {
+        assert_eq!(Vector::zero(), Vector { x: 0.0, y: 0.0 })
+    }
+
+    #[test]
+    pub fn scalar() {
+        assert_eq!(Vector::scalar(1.0), Vector { x: 1.0, y: 1.0 })
+    }
+
+    #[test]
+    pub fn length() {
+        assert_eq!(Vector::scalar(2.0).length(), 8.0_f64.sqrt())
+    }
+
+    #[test]
+    pub fn distance() {
+        let x = Vector::scalar(2.0);
+        let y = Vector::scalar(1.0);
+
+        assert_eq!(x.distance(&y), Vector::scalar(1.0).length());
+        assert_eq!(x.distance(&y), y.distance(&x));
+    }
+
+    #[test]
+    pub fn round() {
+        assert_eq!(
+            Vector::new(1.1, 2.6).round(),
+            Vector::new(1.1_f64.round(), 2.6_f64.round())
+        )
+    }
+
+    #[test]
+    pub fn abs() {
+        assert_eq!(Vector::new(-1.0, 1.0).abs(), Vector::new(1.0, 1.0));
+        assert_eq!(Vector::new(1.0, -1.0).abs(), Vector::new(1.0, 1.0));
+    }
+
+    #[test]
+    fn eq() {
+        assert!(Vector::scalar(1.0) == Vector::scalar(1.0))
+    }
+
+    #[test]
+    fn ne() {
+        assert!(Vector::scalar(2.0) != Vector::scalar(1.0))
+    }
+
+    #[test]
+    fn display() -> Res<()> {
+        let mut f = String::new();
+        write!(f, "{}", Vector::new(1.0, 2.2))?;
+        assert_eq!(f, "(1, 2.2)");
+        Ok(())
+    }
+
+    #[test]
+    fn add() {
+        let x = Vector::new(1.0, 0.0);
+        let y = Vector::new(0.0, 1.0);
+
+        assert_eq!(&x + &y, Vector::new(1.0, 1.0));
+        assert_eq!(&x + &y, &x + y.clone());
+        assert_eq!(x.clone() + y.clone(), &x + y.clone());
+        assert_eq!(&x + &y, x.clone() + &y);
+        assert_eq!(&x + &y, &y + &x);
+    }
+
+    #[test]
+    fn add_asign() {
+        let mut x_1 = Vector::new(1.0, 0.0);
+        let mut x_2 = Vector::new(1.0, 0.0);
+        let y = Vector::new(0.0, 1.0);
+
+        x_1 += &y;
+        x_2 += y;
+        assert_eq!(x_1, Vector::new(1.0, 1.0));
+        assert_eq!(x_1, x_2)
+    }
+
+    #[test]
+    fn mul() {
+        let x = Vector::new(1.0, 0.0);
+        let y = Vector::new(0.0, 1.0);
+
+        assert_eq!(&x * &y, 0.0);
+        assert_eq!(&x * &y, &x * y.clone());
+        assert_eq!(&x * &y, x.clone() * &y);
+        assert_eq!(x.clone() * y.clone(), &x * y.clone());
+        assert_eq!(&x * &y, &y * &x);
+    }
+
+    #[test]
+    fn mul_f64() {
+        let x = Vector::new(1.0, 0.0);
+        let y = 2.0;
+
+        assert_eq!(&x * &y, Vector::new(2.0, 0.0));
+        assert_eq!(&x * &y, &y * &x);
+        assert_eq!(&x * &y, &x * y.clone());
+        assert_eq!(&x * y.clone(), y.clone() * &x);
+        assert_eq!(&x * &y, x.clone() * &y);
+        assert_eq!(&x * &y, &y * x.clone());
+        assert_eq!(x.clone() * y, y * x.clone());
+        assert_eq!(x.clone() * y.clone(), &x * y.clone());
+        assert_eq!(x.clone() * y, y * x.clone());
+        assert_eq!(&x * &y, y * &x);
+    }
+
+    #[test]
+    fn mul_f64_assign() {
+        let mut x_1 = Vector::new(1.0, 0.0);
+        let mut x_2 = Vector::new(1.0, 0.0);
+        let y = 2.0;
+
+        x_1 *= &y;
+        x_2 *= y;
+        assert_eq!(x_1, Vector::new(2.0, 0.0));
+        assert_eq!(x_1, x_2)
+    }
+
+    #[test]
+    fn neg() {
+        let x = Vector::scalar(1.0);
+        assert_eq!(-&x, Vector::scalar(-1.0));
+        assert_eq!(-x, Vector::scalar(-1.0));
+    }
+
+    #[test]
+    fn sub() {
+        let x = Vector::new(1.0, 0.0);
+        let y = Vector::new(0.0, 1.0);
+
+        assert_eq!(&x - &y, Vector::new(1.0, -1.0));
+        assert_eq!(&x - &y, &x - y.clone());
+        assert_eq!(x.clone() - y.clone(), &x - y.clone());
+        assert_eq!(&x - &y, x.clone() - &y);
+        assert_eq!(&x - &y, -(&y - &x));
+    }
+
+    #[test]
+    fn sub_asign() {
+        let mut x_1 = Vector::new(1.0, 0.0);
+        let mut x_2 = Vector::new(1.0, 0.0);
+        let y = Vector::new(0.0, 1.0);
+
+        x_1 -= &y;
+        x_2 -= y;
+        assert_eq!(x_1, Vector::new(1.0, -1.0));
+        assert_eq!(x_1, x_2)
     }
 }

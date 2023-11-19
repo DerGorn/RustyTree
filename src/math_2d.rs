@@ -22,10 +22,6 @@ impl Vector {
         let vector = self - origin;
         vector.rotate_degree(degree) + origin
     }
-
-    pub fn distance(&self, other: &Vector) -> f64 {
-        (self - other).length().sqrt()
-    }
 }
 
 impl Mul<Vector> for Matrix {
@@ -66,5 +62,40 @@ impl Mul<&Vector> for &Matrix {
             self.a * rhs.x + self.b * rhs.y,
             self.c * rhs.x + self.d * rhs.y,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::f64::consts::PI;
+
+    use super::*;
+
+    #[test]
+    fn rotate_vector() {
+        let origin = Vector::new(1.0, 1.0);
+        let x = Vector::new(1.0, 0.0);
+        let y = x.rotate_degree(90.0);
+
+        assert_eq!(y, Vector::new(6.123233995736766e-17, 1.0));
+        assert_eq!(y, x.rotate(PI / 2.0));
+        assert_eq!(
+            x.rotate_around(PI / 2.0, &origin),
+            Vector {
+                x: 2.0,
+                y: 0.9999999999999999
+            }
+        );
+    }
+
+    #[test]
+    fn mul_vector_matrix() {
+        let m = Matrix::scalar(1.0);
+        let v = Vector::scalar(2.0);
+
+        assert_eq!(&m * &v, Vector::scalar(4.0));
+        assert_eq!(&m * &v, m.clone() * v.clone());
+        assert_eq!(&m * &v, m.clone() * &v);
+        assert_eq!(&m * &v, &m * v.clone());
     }
 }

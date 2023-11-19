@@ -37,8 +37,8 @@ impl Color {
     fn hsva_to_rgba(hsva: [u8; 4]) -> [u8; 4] {
         let [h, s, v, a] = hsva;
         let h_f = h as f64 / 255.0;
-        let s_f = s as f64 / 100.0;
-        let v_f = v as f64 / 100.0;
+        let s_f = s as f64 / 255.0;
+        let v_f = v as f64 / 255.0;
 
         let c = v_f * s_f;
         let h_dash = h_f * 6.0;

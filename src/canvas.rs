@@ -1,6 +1,4 @@
-use pixels::{Pixels, SurfaceTexture};
-use winit::{dpi::PhysicalSize, window::Window};
-
+use crate::PhysicalSize;
 use crate::Res;
 
 use crate::color::Color;
@@ -8,7 +6,7 @@ use crate::color::Color;
 use crate::buffer::Buffer;
 use crate::buffer::SimpleBuffer;
 
-use crate::Position;
+use crate::position::Position;
 
 pub trait Drawable<T> {
     fn set_draw_color(&mut self, color: Color);
@@ -43,16 +41,6 @@ pub struct Canvas {
     fill_color: Color,
 }
 impl Canvas {
-    pub fn new_with_pixels(buffer_size: PhysicalSize<u32>, window: &Window) -> Res<Self> {
-        let buffer = Pixels::new(
-            buffer_size.width,
-            buffer_size.height,
-            SurfaceTexture::new(buffer_size.width, buffer_size.height, &window),
-        )?;
-        let buffer = Box::new(buffer);
-        Ok(Self::new_from_buffer(buffer_size, buffer))
-    }
-
     pub fn new_with_simplebuffer(buffer_size: PhysicalSize<u32>) -> Self {
         let buffer = Box::new(SimpleBuffer::new(buffer_size));
         Self::new_from_buffer(buffer_size, buffer)

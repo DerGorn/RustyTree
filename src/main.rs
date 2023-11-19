@@ -1,15 +1,16 @@
-use std::borrow::BorrowMut;
-
 use rand::Rng;
-use rusty_tree::{Camera, Canvas, Color, Drawable, Renderer, Vector};
+use rusty_tree::{
+    camera::Camera, canvas::Canvas, collision::Body, color::Color, math_2d::Vector,
+    renderer::Renderer, world::World, PhysicalSize,
+};
 use winit::{
-    dpi::PhysicalSize,
     event::{Event, WindowEvent},
     event_loop::EventLoop,
     window::WindowBuilder,
 };
 
-fn reset_background_buffer(buffer: &mut Renderer) {
+fn reset_background_buffer(buffer: &mut World) {
+    let buffer = &mut buffer.renderer;
     buffer.clear(0);
 
     let (a, b) = (
@@ -27,7 +28,7 @@ fn reset_background_buffer(buffer: &mut Renderer) {
             255,
             20,
         ));
-        buffer.fill_rect(&center, a*2, b*2, deg);
+        buffer.fill_rect(&center, a * 2, b * 2, deg);
     }
 }
 
@@ -44,18 +45,37 @@ fn main() {
     let window = builder.build(&event_loop).unwrap();
     let mut size = window.inner_size();
 
-    let mut renderer = Renderer::new(
+    let renderer = Renderer::new(
         Camera::new(Vector::new(
             size.width as f64 / 2.0,
             size.height as f64 / 2.0,
         )),
         Canvas::new_with_pixels(size, &window).unwrap(),
     );
-    reset_background_buffer(&mut renderer);
+    let mut world: World = World::new(
+        renderer,
+        PhysicalSize::new(size.width / 100, size.height / 100),
+        1,
+    );
 
     let mut first = true;
+    let mut populate_world = true;
     event_loop.run(move |event, _, control_flow| {
         control_flow.set_poll();
+
+        if populate_world {
+            populate_world = false;
+            let body = Body::new(
+                0.0,
+                Vector::zero(),
+                Vector::zero(),
+                0.0,
+                Vector::zero(),
+                None,
+                None,
+            );
+            world.add_body(body, None);
+        }
 
         match event {
             Event::WindowEvent {
@@ -69,15 +89,15 @@ fn main() {
                 ..
             } => {
                 size = s;
-                renderer.resize(
-                    size,
+                world.renderer.resize(
+                    PhysicalSize::new(size.width, size.height),
                     Some(Camera::new(Vector::new(
                         size.width as f64 / 2.0,
                         size.height as f64 / 2.0,
                     ))),
                 );
                 first = true;
-                reset_background_buffer(&mut renderer);
+                reset_background_buffer(&mut world);
             }
             Event::WindowEvent {
                 event: WindowEvent::CursorMoved { position, .. },
@@ -114,7 +134,7 @@ fn main() {
                 //     pixel[2] = 0xff; // B
                 //     pixel[3] = 0xff; // A
                 // }
-                renderer.render().unwrap();
+                world.renderer.render().unwrap();
             }
             _ => (),
         }

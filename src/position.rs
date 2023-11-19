@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::Vector;
+use crate::math_2d::Vector;
 
 pub struct Position {
     pub x: u32,
