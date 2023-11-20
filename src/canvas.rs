@@ -24,14 +24,6 @@ pub trait Drawable<T> {
     fn set_pixel(&mut self, position: &T, color: Color);
 
     fn draw_line(&mut self, start: &T, end: &T);
-
-    fn draw_ellipse(&mut self, center: &T, a: u32, b: u32);
-
-    fn fill_ellipse(&mut self, center: &T, a: u32, b: u32);
-
-    fn draw_rect(&mut self, origin: &T, width: u32, height: u32);
-
-    fn fill_rect(&mut self, origin: &T, width: u32, height: u32);
 }
 
 pub struct Canvas {
@@ -142,159 +134,109 @@ impl Drawable<Position> for Canvas {
         }
 
         let slope = rise / run;
-        let slope_direction = slope.signum();
+        let slope_direction = slope.signum() as i32;
         let slope = slope.abs();
+        let slope_floor = slope.floor() as i32;
+        let slope_fract = slope.fract();
+        let special_slope = slope == 2.0;
+        let half_slope = (slope / 2.0).abs() as u32;
         let mut current_slope = slope;
 
         let mut last_y = if run > 0.0 { start.y } else { end.y };
 
-        let x_range = if run < 0.0 {
-            (start.x as f64 + run) as u32..start.x
+        let (x_start, x_end) = if run < 0.0 {
+            ((start.x as f64 + run) as u32, start.x)
         } else {
-            start.x..(start.x as f64 + run) as u32
+            (start.x, (start.x as f64 + run) as u32)
         };
+        let x_range = x_start.max(0)..x_end.min(self.size.width);
+
         for x in x_range {
-            if x >= self.size.width {
-                break;
+            let mut height = current_slope.floor() as i32;
+            if x == x_start && special_slope {
+                height -= half_slope as i32;
             }
-            let height = current_slope.floor() as u32;
-            if current_slope.floor() > slope.floor() {
+
+            if height > slope_floor {
                 current_slope -= 1.0;
             }
-            current_slope += slope.fract();
+            current_slope += slope_fract;
             if height == 0 {
-                if last_y >= self.size.height {
-                    continue;
+                if last_y < self.size.height {
+                    Self::fill_pixel(buffer, x, last_y, self.size.width, color);
                 }
-                Self::fill_pixel(buffer, x, last_y, self.size.width, color);
                 continue;
             }
-            let y_range = 0..height as i32;
+
+            let y_end = (last_y as i32 + slope_direction * height) as u32;
+            let y_range = if slope_direction == 1 {
+                last_y.max(0)..y_end.min(self.size.height)
+            } else {
+                y_end.max(0)..last_y.min(self.size.height)
+            };
+
             for y in y_range {
-                let y = (last_y as i32 + slope_direction as i32 * y) as u32;
-                if y >= self.size.height {
-                    continue;
-                }
                 Self::fill_pixel(buffer, x, y, self.size.width, color);
             }
-            last_y = (last_y as f64 + (slope_direction * height as f64)) as u32;
+            last_y = y_end;
+        }
+        if special_slope && last_y >= half_slope {
+            last_y -= half_slope;
+        }
+        if x_end < self.size.width && last_y < self.size.height {
+            Self::fill_pixel(buffer, x_end, last_y, self.size.width, color);
         }
     }
+}
 
-    fn draw_ellipse(&mut self, center: &Position, a: u32, b: u32) {
-        let a = a as i64;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fmt::Write;
 
-        let mut top_y = center.y as i64;
-        let mut bottom_y = center.y as i64;
+    #[test]
+    pub fn draw_line() -> Res<()> {
+        let size = PhysicalSize::new(10, 10);
+        let mut canvas = Canvas::new_with_simplebuffer(size);
+        canvas.clear(100);
 
-        for x in -a..=a {
-            let height =
-                ((1.0 - x.pow(2) as f64 / a.pow(2) as f64) * b.pow(2) as f64).sqrt() as i64;
+        let middle = Position::new(size.width / 2, size.height / 2);
+        let bottom_right = Position::new(size.width, size.height);
+        let top_left = Position::new(0, 0);
+        let middle_left = Position::new(0, size.height / 2);
+        let top_right = Position::new(size.width, 0);
+        let top_middle = Position::new(size.width / 2, 0);
+        let bottom_left = Position::new(0, size.height);
 
-            let x = center.x as f64 + x as f64;
-            if x < 0.0 {
-                bottom_y = center.y as i64 - height;
-                top_y = center.y as i64 + height;
-                continue;
-            }
-            let x = x as u32;
-            if x >= self.size.width {
-                break;
-            }
-            let y = (center.y as i64 - height) as u32;
-            if y >= self.size.height {
-                continue;
-            }
-            self.draw_line(&Position::new(x, bottom_y as u32), &Position::new(x, y));
-            bottom_y = y as i64;
-            let y = center.y + height as u32;
-            if y >= self.size.height {
-                continue;
-            }
-            self.draw_line(&Position::new(x, top_y as u32), &Position::new(x, y));
-            top_y = y as i64;
-        }
-    }
+        canvas.set_draw_color(Color::from_str("green"));
+        canvas.draw_line(&middle, &bottom_right);
 
-    fn fill_ellipse(&mut self, center: &Position, a: u32, b: u32) {
-        let buffer = self.buffer.buffer();
+        canvas.set_draw_color(Color::from_str("white"));
+        canvas.draw_line(&top_left, &middle);
 
-        let a = a as i64;
-        let color = self.fill_color.to_slice();
+        canvas.set_draw_color(Color::from_str("blue"));
+        canvas.draw_line(&middle_left, &top_right);
 
-        for x in -a..=a {
-            let x = x as f64;
-            let height = ((1.0 - x.powi(2) / a.pow(2) as f64) * b.pow(2) as f64).sqrt() as i32;
+        canvas.set_draw_color(Color::from_str("red"));
+        canvas.draw_line(&top_middle, &bottom_left);
 
-            let x = (center.x as f64 + x) as u32;
-            if x >= self.size.width {
-                break;
-            }
-            for y in (center.y as i32 - height) as u32..(center.y as i32 + height) as u32 {
-                if y >= self.size.height {
-                    break;
-                }
-                Self::fill_pixel(buffer, x, y, self.size.width, color);
-            }
-        }
-    }
+        let mut s = String::new();
+        write!(s, "{:?}", canvas.buffer)?;
 
-    fn draw_rect(&mut self, origin: &Position, width: u32, height: u32) {
-        let buffer = self.buffer.buffer();
+        let expect = "SimpleBuffer (10x10): [\
+        [255, 255, 255, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][255, 0, 0, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][0, 0, 255, 255]\
+        [100, 100, 100, 100][255, 255, 255, 255][100, 100, 100, 100][100, 100, 100, 100][255, 0, 0, 255][100, 100, 100, 100][100, 100, 100, 100][0, 0, 255, 255][0, 0, 255, 255][100, 100, 100, 100]\
+        [100, 100, 100, 100][100, 100, 100, 100][255, 255, 255, 255][100, 100, 100, 100][255, 0, 0, 255][0, 0, 255, 255][0, 0, 255, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100]\
+        [100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][255, 0, 0, 255][0, 0, 255, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100]\
+        [100, 100, 100, 100][0, 0, 255, 255][0, 0, 255, 255][255, 0, 0, 255][255, 255, 255, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100]\
+        [0, 0, 255, 255][100, 100, 100, 100][255, 0, 0, 255][100, 100, 100, 100][100, 100, 100, 100][255, 255, 255, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100]\
+        [100, 100, 100, 100][100, 100, 100, 100][255, 0, 0, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][0, 255, 0, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100]\
+        [100, 100, 100, 100][255, 0, 0, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][0, 255, 0, 255][100, 100, 100, 100][100, 100, 100, 100]\
+        [100, 100, 100, 100][255, 0, 0, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][0, 255, 0, 255][100, 100, 100, 100]\
+        [255, 0, 0, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][0, 255, 0, 255]\
+        ]";
 
-        let color = self.draw_color.to_slice();
-
-        let x = origin.x;
-        if x >= self.size.width {
-            return ();
-        }
-        for y in origin.y..origin.y + height {
-            if y >= self.size.height {
-                break;
-            }
-            Self::fill_pixel(buffer, x, y, self.size.width, color);
-        }
-        let x = origin.x + width;
-        if x < self.size.width {
-            for y in origin.y..origin.y + height {
-                if y >= self.size.height {
-                    break;
-                }
-                Self::fill_pixel(buffer, x, y, self.size.width, color);
-            }
-        }
-        for x in origin.x..origin.x + width {
-            if x >= self.size.width {
-                break;
-            }
-            let y = origin.y;
-            if y >= self.size.height {
-                break;
-            }
-            Self::fill_pixel(buffer, x, y, self.size.width, color);
-            let y = origin.y + height;
-            if y >= self.size.height {
-                break;
-            }
-            Self::fill_pixel(buffer, x, y, self.size.width, color);
-        }
-    }
-
-    fn fill_rect(&mut self, origin: &Position, width: u32, height: u32) {
-        let buffer = self.buffer.buffer();
-
-        let color = self.fill_color.to_slice();
-
-        for x in origin.x..origin.x + width {
-            if x >= self.size.width {
-                break;
-            }
-            for y in origin.y..origin.y + height {
-                if y >= self.size.height {
-                    break;
-                }
-                Self::fill_pixel(buffer, x, y, self.size.width, color);
-            }
-        }
+        assert_eq!(expect, s);
+        Ok(())
     }
 }

@@ -1,7 +1,14 @@
 use rand::Rng;
 use rusty_tree::{
-    camera::Camera, canvas::Canvas, collision::Body, color::Color, math_2d::Vector,
-    renderer::Renderer, world::World, PhysicalSize,
+    camera::Camera,
+    canvas::{self, Canvas, Drawable},
+    collision::Body,
+    color::Color,
+    math_2d::Vector,
+    position::Position,
+    renderer::Renderer,
+    world::World,
+    PhysicalSize,
 };
 use winit::{
     event::{Event, WindowEvent},
@@ -20,15 +27,15 @@ fn reset_background_buffer(buffer: &mut World) {
 
     buffer.set_draw_color(Color::from_str("red"));
     let center = Vector::zero();
-    for deg in (0..=180).step_by(10) {
+    for deg in (0..=180).step_by(2) {
         let deg = deg as f64;
-        buffer.set_fill_color(Color::new_hsva(
+        buffer.set_draw_color(Color::new_hsva(
             (deg * 255.0 / 180.0).round() as u8,
             255,
             255,
             20,
         ));
-        buffer.fill_rect(&center, a * 2, b * 2, deg);
+        buffer.draw_rect(&center, a * 2, b * 2, deg);
     }
 }
 

@@ -1,6 +1,5 @@
 use crate::{math_2d::Vector, position::Position};
 
-
 pub struct Camera {
     origin: Vector,
 }
@@ -24,5 +23,18 @@ impl Camera {
     pub fn project(&self, vector: &Vector) -> Vector {
         let position = vector + &self.origin;
         position
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn clamped_projection() {
+        let v = Vector::new(-1.0, 15.0);
+        let cam = Camera::new(Vector::new(0.0, -15.0));
+
+        assert_eq!(cam.clamped_projection_to_position(&v), Position::new(0, 0));
     }
 }

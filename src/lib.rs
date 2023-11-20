@@ -21,7 +21,7 @@ pub mod canvas;
 
 pub mod collision;
 
-mod position;
+pub mod position;
 
 pub mod camera;
 

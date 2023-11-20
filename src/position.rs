@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use crate::math_2d::Vector;
 
+#[derive(Clone, Debug)]
 pub struct Position {
     pub x: u32,
     pub y: u32,
@@ -43,6 +44,16 @@ impl Position {
             );
         };
         Position::new(x as u32, y as u32)
+    }
+}
+
+impl PartialEq for Position {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        self.x != other.x || self.y != other.y
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::{
     camera::Camera, canvas::Canvas, canvas::Drawable, color::Color, math_2d::Vector,
-    position::Position, Res, PhysicalSize,
+    position::Position, PhysicalSize, Res,
 };
 
 impl Vector {
