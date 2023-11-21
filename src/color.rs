@@ -95,3 +95,15 @@ impl Color {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hsva_to_rgba() {
+        for _ in 0..=255 {
+            Color::new_hsva(0, 255, 255, 255).to_rgba();
+        }
+    }
+}

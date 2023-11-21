@@ -2,13 +2,12 @@ use rand::Rng;
 use rusty_tree::{
     camera::Camera,
     canvas::{self, Canvas, Drawable},
-    collision::Body,
     color::Color,
     math_2d::Vector,
     position::Position,
     renderer::Renderer,
     world::World,
-    PhysicalSize,
+    PhysicalSize, physics_2d::Body,
 };
 use winit::{
     event::{Event, WindowEvent},

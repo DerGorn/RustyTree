@@ -1,8 +1,7 @@
 use std::rc::Rc;
 
 use crate::{
-    collision::{Body, CollisionLayer},
-    renderer::Renderer, PhysicalSize,
+    math_2d::Vector, physics_2d::Body, physics_2d::CollisionLayer, renderer::Renderer, PhysicalSize,
 };
 
 pub struct CollisionSpecifier {
@@ -11,11 +10,12 @@ pub struct CollisionSpecifier {
 }
 
 pub struct World {
-    bodies: Vec<Rc<Body>>,
+    bodies: Vec<Rc<Body<Vector>>>,
     pub renderer: Renderer,
     collision_layers: Vec<CollisionLayer>,
 }
 impl World {
+    /// Creates a new World on the `renderer`. The CollisionLayers will use a SpatialHashGrid with `collision_grid_size` cells in the grid
     pub fn new(
         renderer: Renderer,
         collision_grid_size: PhysicalSize<u32>,
@@ -37,19 +37,27 @@ impl World {
         }
     }
 
-    pub fn add_body(&mut self, body: Body, collision_specifier: Option<CollisionSpecifier>) {
+    pub fn add_body(
+        &mut self,
+        body: Body<Vector>,
+        collision_specifier: Option<CollisionSpecifier>,
+    ) {
         let has_collision = body.has_collision();
         let body = Rc::new(body);
         self.bodies.push(body.clone());
         if has_collision {
             if let Some(specifier) = collision_specifier {
                 self.collision_layers[specifier.collision_layer]
-                    .add_body(body, specifier.is_collision_obstacle.unwrap())
+                    .add_body(body, specifier.is_collision_obstacle.unwrap());
             }
         };
     }
 
-    pub fn remove_body(&mut self, body: &Body, collision_specifier: Option<CollisionSpecifier>) {
+    pub fn remove_body(
+        &mut self,
+        body: &Body<Vector>,
+        collision_specifier: Option<CollisionSpecifier>,
+    ) {
         let has_collision = body.has_collision();
         if has_collision {
             if let Some(specifier) = collision_specifier {

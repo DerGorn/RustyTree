@@ -19,8 +19,6 @@ pub mod buffer;
 
 pub mod canvas;
 
-pub mod collision;
-
 pub mod position;
 
 pub mod camera;
@@ -30,6 +28,8 @@ pub mod renderer;
 mod spatial_hashgrid;
 
 pub mod world;
+
+pub mod physics_2d;
 
 #[cfg(feature = "pixels")]
 pub mod pixels_integration;

@@ -62,3 +62,28 @@ impl Display for Position {
         write!(f, "(x: {}, y: {})", self.x, self.y)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::Res;
+    use std::fmt::Write;
+
+    use super::*;
+
+    #[test]
+    fn create() {
+        let p1 = Position::new(1, 1);
+        let p2 = Position::from_vector(Vector::new(1.0, 1.0));
+
+        assert_eq!(p1, Position { x: 1, y: 1 });
+        assert_eq!(p1, p2);
+    }
+
+    #[test]
+    fn display() -> Res<()> {
+        let mut f = String::new();
+        write!(f, "{}", Position::new(1, 2))?;
+        assert_eq!(f, "(x: 1, y: 2)");
+        Ok(())
+    }
+}
