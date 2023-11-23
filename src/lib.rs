@@ -1,4 +1,8 @@
-use std::error::Error;
+use std::hash::Hash;
+use std::{cell::RefCell, error::Error, rc::Rc};
+
+use math_2d::Vector;
+use physics_2d::{Body, CollisionBody, VisiualShape};
 
 #[derive(Debug, Clone, Copy)]
 pub struct PhysicalSize<P> {

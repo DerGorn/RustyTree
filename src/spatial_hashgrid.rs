@@ -1,7 +1,6 @@
 use std::{
     collections::{hash_set::Iter, HashSet},
     hash::Hash,
-    rc::Rc,
 };
 
 use crate::{math_2d::Vector, PhysicalSize};
@@ -9,17 +8,17 @@ use crate::{math_2d::Vector, PhysicalSize};
 #[derive(Debug)]
 pub struct SpatialHashgrid<T>
 where
-    T: Eq + Hash,
+    T: Eq + Hash + Clone,
 {
     ///number of cells in the grid
     grid_size: PhysicalSize<f64>,
     ///dimensions of a cell
     cell_size: PhysicalSize<u32>,
-    grid: Vec<HashSet<Rc<T>>>,
+    grid: Vec<HashSet<T>>,
 }
 impl<T> SpatialHashgrid<T>
 where
-    T: Eq + Hash,
+    T: Eq + Hash + Clone,
 {
     ///Creates a SpatialHashgrid from the dimensions of the grid `grid_size` and the dimensions of each cell `cell_size`
     pub fn new(grid_size: PhysicalSize<u32>, cell_size: PhysicalSize<u32>) -> Self {
@@ -51,7 +50,7 @@ where
     ///
     ///If the set did not previously contain this value, true is returned.
     ///If the set already contained this value, false is returned.
-    pub fn insert(&mut self, element: Rc<T>, position: &Vector) -> bool {
+    pub fn insert(&mut self, element: T, position: &Vector) -> bool {
         let index = self.spatial_hash(&position);
         self.grid.get_mut(index).unwrap().insert(element)
     }
@@ -68,7 +67,7 @@ where
         self.grid.get_mut(index).unwrap().contains(element)
     }
 
-    pub fn get_cell(&self, position: &Vector) -> Iter<'_, Rc<T>> {
+    pub fn get_cell(&self, position: &Vector) -> Iter<'_, T> {
         let index = self.spatial_hash(&position);
         self.grid.get(index).unwrap().iter()
     }
@@ -87,10 +86,7 @@ mod tests {
 
         for x in 0..=2 {
             for y in 0..=2 {
-                grid.insert(
-                    Rc::new(format!("({}, {})", x, y)),
-                    &Vector::new(x as f64, y as f64),
-                );
+                grid.insert(format!("({}, {})", x, y), &Vector::new(x as f64, y as f64));
             }
         }
 
@@ -104,14 +100,14 @@ mod tests {
     fn get_cell() -> Res<()> {
         let mut grid = SpatialHashgrid::new(PhysicalSize::new(2, 2), PhysicalSize::new(1, 1));
 
-        let el = Rc::new(format!("({}, {})", 0, 0));
+        let el = format!("({}, {})", 0, 0);
         let pos = Vector::new(0.0_f64, 0.0_f64);
 
         grid.insert(el.clone(), &pos);
 
         assert!(grid.contains(&el, &pos));
 
-        let cell: Vec<&Rc<String>> = grid.get_cell(&pos).collect();
+        let cell: Vec<&String> = grid.get_cell(&pos).collect();
         assert!(cell.contains(&&el));
 
         let mut f = String::new();

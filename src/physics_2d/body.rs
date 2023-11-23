@@ -1,17 +1,17 @@
 use std::hash::Hash;
 use uuid::Uuid;
 
-use super::{Shape, collision::CollisionBody};
+use super::{collision::CollisionBody, Shape};
 
-type VisiualShape = Shape;
+pub type VisiualShape = Shape;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Body<T> {
     pub mass: f64,
     pub position: T,
     pub velocity: T,
     pub angle_deg: f64,
-    pub rotation_velocity: T,
+    pub rotation_velocity: f64,
     shape: Option<VisiualShape>,
     collision_body: Option<CollisionBody>,
     uuid: Uuid,
@@ -22,7 +22,7 @@ impl<T> Body<T> {
         position: T,
         velocity: T,
         angle_deg: f64,
-        rotation_velocity: T,
+        rotation_velocity: f64,
         shape: Option<VisiualShape>,
         collision_body: Option<CollisionBody>,
     ) -> Self {
@@ -72,33 +72,9 @@ mod tests {
 
     #[test]
     fn bodies_equal() {
-        let b1 = Body::new(
-            0.0,
-            Vector::zero(),
-            Vector::zero(),
-            0.0,
-            Vector::zero(),
-            None,
-            None,
-        );
-        let b2 = Body::new(
-            0.0,
-            Vector::zero(),
-            Vector::zero(),
-            0.0,
-            Vector::zero(),
-            None,
-            None,
-        );
-        let mut b3 = Body::new(
-            0.0,
-            Vector::zero(),
-            Vector::zero(),
-            0.0,
-            Vector::zero(),
-            None,
-            None,
-        );
+        let b1 = Body::new(0.0, Vector::zero(), Vector::zero(), 0.0, 0.0, None, None);
+        let b2 = Body::new(0.0, Vector::zero(), Vector::zero(), 0.0, 0.0, None, None);
+        let mut b3 = Body::new(0.0, Vector::zero(), Vector::zero(), 0.0, 0.0, None, None);
         b3.uuid = b1.uuid;
 
         assert_eq!(&b2, b2);

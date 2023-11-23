@@ -1,7 +1,5 @@
-use std::rc::Rc;
-
 use crate::{
-    math_2d::Vector, physics_2d::Body, physics_2d::CollisionLayer, renderer::Renderer, PhysicalSize,
+    math_2d::Vector, physics_2d::Body, physics_2d::CollisionLayer, renderer::Renderer, PhysicalSize, physics_2d::RefBody,
 };
 
 pub struct CollisionSpecifier {
@@ -9,8 +7,9 @@ pub struct CollisionSpecifier {
     is_collision_obstacle: Option<bool>,
 }
 
+
 pub struct World {
-    bodies: Vec<Rc<Body<Vector>>>,
+    bodies: Vec<RefBody>,
     pub renderer: Renderer,
     collision_layers: Vec<CollisionLayer>,
 }
@@ -43,7 +42,7 @@ impl World {
         collision_specifier: Option<CollisionSpecifier>,
     ) {
         let has_collision = body.has_collision();
-        let body = Rc::new(body);
+        let body: RefBody = body.into();
         self.bodies.push(body.clone());
         if has_collision {
             if let Some(specifier) = collision_specifier {
@@ -55,7 +54,7 @@ impl World {
 
     pub fn remove_body(
         &mut self,
-        body: &Body<Vector>,
+        body: &RefBody,
         collision_specifier: Option<CollisionSpecifier>,
     ) {
         let has_collision = body.has_collision();
@@ -71,7 +70,7 @@ impl World {
                 }
             }
         }
-        match self.bodies.iter().position(|el| el.as_ref() == body) {
+        match self.bodies.iter().position(|el| el == body) {
             None => {}
             Some(index) => {
                 self.bodies.remove(index);

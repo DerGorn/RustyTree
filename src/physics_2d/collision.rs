@@ -1,11 +1,10 @@
-use crate::physics_2d::{Body, Shape};
+use crate::physics_2d::{RefBody, Shape};
+use crate::spatial_hashgrid::SpatialHashgrid;
 use crate::PhysicalSize;
-use crate::{math_2d::Vector, spatial_hashgrid::SpatialHashgrid};
-use std::rc::Rc;
 
 type CollisionShape = Shape;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct CollisionBody {
     shape: CollisionShape,
     behaviour: Mass,
@@ -16,7 +15,7 @@ pub struct CollisionBody {
 /// * `Infinite`: Acts as a wall with infinite mass. Basically absorbs all of the impacting bodies impulse and reflects double it (p2' = - p2)
 /// * `Copy`: Copies the impacting bodies mass. Results in a simple impulse transfer between them (p1' = p2; p2' = p1)
 /// * `Elastic(masss: f64)`: a finite mass of a elastically colliding body.
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Mass {
     Infinite,
     Copy,
@@ -31,9 +30,9 @@ pub enum Mass {
 ///
 #[derive(Debug)]
 pub struct CollisionLayer {
-    obstacles: Vec<Rc<Body<Vector>>>,
-    actors: Vec<Rc<Body<Vector>>>,
-    collision_grid: SpatialHashgrid<Body<Vector>>,
+    obstacles: Vec<RefBody>,
+    actors: Vec<RefBody>,
+    collision_grid: SpatialHashgrid<RefBody>,
 }
 impl CollisionLayer {
     ///Creates a new CollisionLayer. The underlaying SpatialHashgrid will have the total dimensions `grid_size` and each cell in the grid has the dimensions `cell_size`
@@ -51,8 +50,8 @@ impl CollisionLayer {
     ///
     ///If the underliying `SpatialHashgrid` did not previously contain this value, true is returned. If the grid already contained this value, false is returned and the body does not get added again.
     /// Meaning: If a body is allready part of the layer as a actor, it can not be added as a obstacle, before being removed and vice versa.
-    pub fn add_body(&mut self, collision_body: Rc<Body<Vector>>, is_obstacle: bool) -> bool {
-        let position = collision_body.position.clone();
+    pub fn add_body(&mut self, collision_body: RefBody, is_obstacle: bool) -> bool {
+        let position = collision_body.position().clone();
         if self
             .collision_grid
             .insert(collision_body.clone(), &position)
@@ -71,23 +70,15 @@ impl CollisionLayer {
     ///Removes the body from the collision layer, if it is contained
     ///
     ///Return `true` if the body was part of the layer
-    pub fn remove_body(
-        &mut self,
-        collision_body: &Body<Vector>,
-        is_obstacle: Option<bool>,
-    ) -> bool {
+    pub fn remove_body(&mut self, collision_body: &RefBody, is_obstacle: Option<bool>) -> bool {
         if self
             .collision_grid
-            .contains(collision_body, &collision_body.position)
+            .contains(collision_body.into(), &collision_body.position())
         {
             match is_obstacle {
                 Some(is_obstacle) => {
                     if is_obstacle {
-                        match self
-                            .obstacles
-                            .iter()
-                            .position(|el| el.as_ref() == collision_body)
-                        {
+                        match self.obstacles.iter().position(|el| el == collision_body) {
                             None => {
                                 return false;
                             }
@@ -96,11 +87,7 @@ impl CollisionLayer {
                             }
                         }
                     } else {
-                        match self
-                            .actors
-                            .iter()
-                            .position(|el| el.as_ref() == collision_body)
-                        {
+                        match self.actors.iter().position(|el| el == collision_body) {
                             None => {
                                 return false;
                             }
@@ -110,16 +97,8 @@ impl CollisionLayer {
                         }
                     }
                 }
-                None => match self
-                    .obstacles
-                    .iter()
-                    .position(|el| el.as_ref() == collision_body)
-                {
-                    None => match self
-                        .actors
-                        .iter()
-                        .position(|el| el.as_ref() == collision_body)
-                    {
+                None => match self.obstacles.iter().position(|el| el == collision_body) {
+                    None => match self.actors.iter().position(|el| el == collision_body) {
                         None => {
                             return false;
                         }
@@ -133,7 +112,7 @@ impl CollisionLayer {
                 },
             }
             self.collision_grid
-                .remove(collision_body, &collision_body.position);
+                .remove(collision_body, &collision_body.position());
             true
         } else {
             false
@@ -143,46 +122,40 @@ impl CollisionLayer {
 
 #[cfg(test)]
 mod tests {
+    use crate::math_2d::Vector;
+
     use super::*;
 
     #[test]
     fn add_to_layer() {
-        let b1 = Rc::new(Body::new(
-            1.0,
-            Vector::zero(),
-            Vector::zero(),
-            0.0,
-            Vector::zero(),
-            None,
-            None,
-        ));
-        let b2 = Rc::new(Body::new(
+        let b1 = RefBody::new(1.0, Vector::zero(), Vector::zero(), 0.0, 0.0, None, None);
+        let b2 = RefBody::new(
             2.0,
             Vector::scalar(20.0),
             Vector::zero(),
             0.0,
-            Vector::zero(),
+            0.0,
             None,
             None,
-        ));
-        let b3 = Rc::new(Body::new(
+        );
+        let b3 = RefBody::new(
             3.0,
             Vector::scalar(100.0),
             Vector::zero(),
             0.0,
-            Vector::zero(),
+            0.0,
             None,
             None,
-        ));
-        let b4 = Rc::new(Body::new(
+        );
+        let b4 = RefBody::new(
             4.0,
             Vector::new(0.0, 20.0),
             Vector::zero(),
             0.0,
-            Vector::zero(),
+            0.0,
             None,
             None,
-        ));
+        );
 
         let mut collision_layer =
             CollisionLayer::new(PhysicalSize::new(100, 100), PhysicalSize::new(10, 10));

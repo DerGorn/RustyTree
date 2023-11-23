@@ -1,13 +1,15 @@
+#![forbid(unconditional_recursion)]
 use rand::Rng;
 use rusty_tree::{
     camera::Camera,
     canvas::{self, Canvas, Drawable},
     color::Color,
     math_2d::Vector,
+    physics_2d::Body,
     position::Position,
     renderer::Renderer,
     world::World,
-    PhysicalSize, physics_2d::Body,
+    PhysicalSize,
 };
 use winit::{
     event::{Event, WindowEvent},
@@ -71,15 +73,7 @@ fn main() {
 
         if populate_world {
             populate_world = false;
-            let body = Body::new(
-                0.0,
-                Vector::zero(),
-                Vector::zero(),
-                0.0,
-                Vector::zero(),
-                None,
-                None,
-            );
+            let body = Body::new(0.0, Vector::zero(), Vector::zero(), 0.0, 0.0, None, None);
             world.add_body(body, None);
         }
 
