@@ -81,6 +81,12 @@ impl Renderer {
         self.canvas.clear(clear_value)
     }
 
+    pub fn draw_line(&mut self, start: &Vector, end: &Vector) {
+        let start_projection = self.camera.clamped_projection_to_position(&start);
+        let end_projection = self.camera.clamped_projection_to_position(&end);
+        self.canvas.draw_line(&start_projection, &end_projection);
+    }
+
     pub fn draw_ellipse(&mut self, center: &Vector, a: u32, b: u32, angel_degree: f64) {
         let alpha = angel_degree % 360.0;
         let quarter_turns = (alpha / 90.0).floor();
@@ -155,32 +161,13 @@ impl Renderer {
 
         let color = self.canvas.get_fill_color();
 
-        for x in min.x as i64..max.x as i64 {
-            for y in min.y as i64..max.y as i64 {
+        for x in min.x as i32..=max.x as i32 {
+            for y in min.y as i32..=max.y as i32 {
                 let vector = Vector::new(x as f64, y as f64);
                 if is_inside(&vector) {
-                    self.set_pixel(&vector, color.clone())
+                    self.set_pixel(&vector, &color)
                 }
             }
-        }
-    }
-
-    pub fn draw_line(&mut self, start: &Vector, end: &Vector) {
-        let mut start_projection = self.camera.project(&start);
-        let mut end_projection = self.camera.project(&end);
-        let edge = &end_projection - &start_projection;
-        let mut draw_line = true;
-        if start_projection.x < 0.0 || start_projection.y < 0.0 {
-            draw_line = start_projection.clamp_point_along_edge(&edge, true)
-        };
-        if draw_line && (end_projection.x < 0.0 || end_projection.y < 0.0) {
-            draw_line = end_projection.clamp_point_along_edge(&edge, false)
-        };
-        if draw_line {
-            self.canvas.draw_line(
-                &Position::from_vector(start_projection),
-                &Position::from_vector(end_projection),
-            );
         }
     }
 
@@ -279,28 +266,20 @@ impl Renderer {
         }
 
         if draw_bottom_edge {
-            self.canvas.draw_line(
-                &Position::from_vector(right_of_bottom_edge),
-                &Position::from_vector(left_of_bottom_edge),
-            );
+            self.canvas
+                .draw_line(&right_of_bottom_edge.into(), &left_of_bottom_edge.into());
         }
         if draw_right_edge {
-            self.canvas.draw_line(
-                &Position::from_vector(bottom_of_right_edge),
-                &Position::from_vector(top_of_right_edge),
-            );
+            self.canvas
+                .draw_line(&bottom_of_right_edge.into(), &top_of_right_edge.into());
         }
         if draw_left_edge {
-            self.canvas.draw_line(
-                &Position::from_vector(top_of_left_edge),
-                &Position::from_vector(bottom_of_left_edge),
-            );
+            self.canvas
+                .draw_line(&top_of_left_edge.into(), &bottom_of_left_edge.into());
         }
         if draw_top_edge {
-            self.canvas.draw_line(
-                &Position::from_vector(left_of_top_edge),
-                &Position::from_vector(right_of_top_edge),
-            );
+            self.canvas
+                .draw_line(&left_of_top_edge.into(), &right_of_top_edge.into());
         }
     }
 
@@ -354,6 +333,11 @@ impl Renderer {
         let x_min = bottom_left_projection.x.max(0.0) as u32;
         let x_max = top_right_projection.x.min(self.get_width() as f64 - 1.0) as u32;
 
+        let global_y_min = top_left_projection.y.max(0.0);
+        let global_y_max = bottom_right_projection
+            .y
+            .min(self.get_height() as f64 - 1.0);
+
         let y_min = |x: f64| -> u32 {
             let y_min = if x < top_left_projection.x {
                 let x = x - x_min as f64;
@@ -364,11 +348,10 @@ impl Renderer {
             } else {
                 top_left_projection.y
             }
-            .max(0.0) as u32;
+            .max(global_y_min) as u32;
             y_min
         };
 
-        let height = self.get_height() as f64 - 1.0;
         let y_max = |x: f64| -> u32 {
             if x < bottom_right_projection.x {
                 let x = x - x_min as f64;
@@ -379,19 +362,19 @@ impl Renderer {
             } else {
                 bottom_right_projection.y
             }
-            .min(height) as u32
+            .min(global_y_max) as u32
         };
 
         let color = self.canvas.get_fill_color();
 
         for x in x_min..=x_max {
             for y in y_min(x as f64)..=y_max(x as f64) {
-                self.canvas.set_pixel(&Position::new(x, y), color.clone());
+                self.canvas.set_pixel(&Position::new(x, y), &color);
             }
         }
     }
 
-    pub fn set_pixel(&mut self, position: &Vector, color: Color) {
+    pub fn set_pixel(&mut self, position: &Vector, color: &Color) {
         let position = self.camera.clamped_projection_to_position(&position);
         if position.x < self.get_width() && position.y < self.get_height() {
             self.canvas.set_pixel(&position, color)

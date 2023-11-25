@@ -28,15 +28,15 @@ fn reset_background_buffer(buffer: &mut World) {
 
     buffer.set_draw_color(Color::from_str("red"));
     let center = Vector::zero();
-    for deg in (0..=180).step_by(2) {
+    for deg in (0..180).step_by(2) {
         let deg = deg as f64;
-        buffer.set_draw_color(Color::new_hsva(
+        buffer.set_fill_color(Color::new_hsva(
             (deg * 255.0 / 180.0).round() as u8,
             255,
             255,
             20,
         ));
-        buffer.draw_rect(&center, a * 2, b * 2, deg);
+        buffer.fill_ellipse(&center, 2 * a, 2 * b, deg);
     }
 }
 

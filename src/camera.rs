@@ -8,6 +8,7 @@ impl Camera {
         Self { origin }
     }
 
+    ///Turns a `vector` in Logicalspace into one in BUfferspace, while clamping it into positive values for `Position`
     pub fn clamped_projection_to_position(&self, vector: &Vector) -> Position {
         let mut position = self.project(vector);
         if position.x < 0.0 {
@@ -16,10 +17,10 @@ impl Camera {
         if position.y < 0.0 {
             position.y = 0.0;
         }
-        Position::from_vector(position)
+        position.into()
     }
 
-    ///Turns a `Vector` in Logicalspace into one in Bufferspace
+    ///Turns a `vector` in Logicalspace into one in Bufferspace
     pub fn project(&self, vector: &Vector) -> Vector {
         let position = vector + &self.origin;
         position

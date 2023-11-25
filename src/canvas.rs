@@ -21,7 +21,7 @@ pub trait Drawable<T> {
 
     fn clear(&mut self, clear_value: u8);
 
-    fn set_pixel(&mut self, position: &T, color: Color);
+    fn set_pixel(&mut self, position: &T, color: &Color);
 
     fn draw_line(&mut self, start: &T, end: &T);
 }
@@ -101,7 +101,7 @@ impl Drawable<Position> for Canvas {
         self.buffer.render()
     }
 
-    fn set_pixel(&mut self, position: &Position, color: Color) {
+    fn set_pixel(&mut self, position: &Position, color: &Color) {
         Self::fill_pixel(
             self.buffer.buffer(),
             position.x,
@@ -124,73 +124,59 @@ impl Drawable<Position> for Canvas {
     }
 
     fn draw_line(&mut self, start: &Position, end: &Position) {
+        let width = self.size.width - 1;
+        let height = self.size.height - 1;
         let buffer = self.buffer.buffer();
-
         let color = self.draw_color.to_slice();
-        let rise = end.y as f64 - start.y as f64;
-        let mut run = end.x as f64 - start.x as f64;
-        if run == 0.0 {
-            run = 1.0;
-        }
 
-        let slope = rise / run;
-        let slope_direction = slope.signum() as i32;
-        let slope = slope.abs();
-        let slope_floor = slope.floor() as i32;
-        let slope_fract = slope.fract();
-        let special_slope = slope == 2.0;
-        let half_slope = (slope / 2.0).abs() as u32;
-        let mut current_slope = slope;
-
-        let mut last_y = if run > 0.0 { start.y } else { end.y };
-
-        let (x_start, x_end) = if run < 0.0 {
-            ((start.x as f64 + run) as u32, start.x)
+        let (mut start, mut end) = if start.x > end.x {
+            (end, start)
         } else {
-            (start.x, (start.x as f64 + run) as u32)
+            (start, end)
         };
-        let x_range = x_start.max(0)..x_end.min(self.size.width);
 
-        for x in x_range {
-            let mut height = current_slope.floor() as i32;
-            if x == x_start && special_slope {
-                height -= half_slope as i32;
-            }
+        let run = end.x as f64 - start.x as f64;
+        let rise = end.y as f64 - start.y as f64;
+        let mut slope = rise / run;
+        if slope == f64::INFINITY {
+            slope = f64::NEG_INFINITY;
+            (start, end) = (end, start);
+        }
+        let slope_direction = slope.signum() as i32;
+        let mut last_y = start.y;
 
-            if height > slope_floor {
-                current_slope -= 1.0;
-            }
-            current_slope += slope_fract;
-            if height == 0 {
-                if last_y < self.size.height {
-                    Self::fill_pixel(buffer, x, last_y, self.size.width, color);
-                }
-                continue;
-            }
+        let (y_min, y_max) = if start.y > end.y {
+            (end.y.max(0), start.y.min(height))
+        } else {
+            (start.y.max(0), end.y.min(height))
+        };
 
-            let y_end = (last_y as i32 + slope_direction * height) as u32;
-            let y_range = if slope_direction == 1 {
-                last_y.max(0)..y_end.min(self.size.height)
+        for x in start.x.max(0)..=end.x.min(width) {
+            let end = (start.y as f64 + ((x - start.x) as f64 * slope).round()) as u32;
+            let (mut start_y, mut end_y) = if last_y > end {
+                (end, last_y)
             } else {
-                y_end.max(0)..last_y.min(self.size.height)
+                (last_y, end)
             };
-
-            for y in y_range {
+            if end_y > start_y && x != start.x {
+                if slope_direction == -1 {
+                    end_y = (end_y as i32 + slope_direction) as u32;
+                } else {
+                    start_y = (start_y as i32 + slope_direction) as u32;
+                }
+            }
+            for y in start_y.max(y_min)..=end_y.min(y_max) {
                 Self::fill_pixel(buffer, x, y, self.size.width, color);
             }
-            last_y = y_end;
-        }
-        if special_slope && last_y >= half_slope {
-            last_y -= half_slope;
-        }
-        if x_end < self.size.width && last_y < self.size.height {
-            Self::fill_pixel(buffer, x_end, last_y, self.size.width, color);
+            last_y = end;
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::math_2d::Vector;
+
     use super::*;
     use std::fmt::Write;
 
@@ -201,12 +187,12 @@ mod tests {
         canvas.clear(100);
 
         let middle = Position::new(size.width / 2, size.height / 2);
-        let bottom_right = Position::new(size.width, size.height);
+        let bottom_right = Position::new(size.width - 1, size.height - 1);
         let top_left = Position::new(0, 0);
         let middle_left = Position::new(0, size.height / 2);
-        let top_right = Position::new(size.width, 0);
+        let top_right = Position::new(size.width - 1, 0);
         let top_middle = Position::new(size.width / 2, 0);
-        let bottom_left = Position::new(0, size.height);
+        let bottom_left = Position::new(0, size.height - 1);
 
         canvas.set_draw_color(Color::from_str("green"));
         canvas.draw_line(&middle, &bottom_right);
@@ -225,9 +211,9 @@ mod tests {
 
         let expect = "SimpleBuffer (10x10): [\
         [255, 255, 255, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][255, 0, 0, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][0, 0, 255, 255]\
-        [100, 100, 100, 100][255, 255, 255, 255][100, 100, 100, 100][100, 100, 100, 100][255, 0, 0, 255][100, 100, 100, 100][100, 100, 100, 100][0, 0, 255, 255][0, 0, 255, 255][100, 100, 100, 100]\
+        [100, 100, 100, 100][255, 255, 255, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][255, 0, 0, 255][100, 100, 100, 100][0, 0, 255, 255][0, 0, 255, 255][100, 100, 100, 100]\
         [100, 100, 100, 100][100, 100, 100, 100][255, 255, 255, 255][100, 100, 100, 100][255, 0, 0, 255][0, 0, 255, 255][0, 0, 255, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100]\
-        [100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][255, 0, 0, 255][0, 0, 255, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100]\
+        [100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][0, 0, 255, 255][255, 0, 0, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100]\
         [100, 100, 100, 100][0, 0, 255, 255][0, 0, 255, 255][255, 0, 0, 255][255, 255, 255, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100]\
         [0, 0, 255, 255][100, 100, 100, 100][255, 0, 0, 255][100, 100, 100, 100][100, 100, 100, 100][255, 255, 255, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100]\
         [100, 100, 100, 100][100, 100, 100, 100][255, 0, 0, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100][0, 255, 0, 255][100, 100, 100, 100][100, 100, 100, 100][100, 100, 100, 100]\
@@ -238,5 +224,50 @@ mod tests {
 
         assert_eq!(expect, s);
         Ok(())
+    }
+
+    #[test]
+    #[ignore]
+    fn start_end_points() {
+        let size = PhysicalSize::new(301, 301);
+        let mut canvas = Canvas::new_with_simplebuffer(size);
+
+        let clear_color = Color::from_str("black");
+        canvas.set_draw_color(Color::from_str("red"));
+
+        let buffer_width = canvas.get_width();
+        for x in 0..size.width {
+            for y in 0..size.height {
+                let start = Vector::new(x as f64, y as f64).into();
+                let end =
+                    Vector::new((size.width - x - 1) as f64, (size.height - y - 1) as f64).into();
+                let start_index = ((buffer_width * y + x) * 4) as usize;
+                let end_index =
+                    ((buffer_width * (size.height - y - 1) + (size.width - x - 1)) * 4) as usize;
+
+                canvas.set_pixel(&start, &clear_color);
+                canvas.set_pixel(&end, &clear_color);
+
+                canvas.draw_line(&start, &end);
+
+                {
+                    let buffer = canvas.as_slice();
+                    println!("\nstart: {} : {}", start, start_index);
+                    println!("end: {} : {}", end, end_index);
+                    assert_eq!(buffer[start_index], 255, "start failed");
+                    assert_eq!(buffer[end_index], 255, "end_failed");
+                }
+
+                println!("Reverse");
+                canvas.set_pixel(&start, &clear_color);
+                canvas.set_pixel(&end, &clear_color);
+
+                canvas.draw_line(&end, &start);
+
+                let buffer = canvas.as_slice();
+                assert_eq!(buffer[start_index], 255, "reverse start (end) failed");
+                assert_eq!(buffer[end_index], 255, "reverse end (start) failed");
+            }
+        }
     }
 }

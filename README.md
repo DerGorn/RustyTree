@@ -127,3 +127,13 @@ Created by imperfections in the `Renderer::draw_rect` function during develepome
     }
 ```
 ![Filled Rectangles](examples/FilledRectangles.png)
+
+# Future Plans
+
+## Collision
+
+Collision is cool, we need it. Infrastructure stands just the real implementation is needed.
+
+### What to avoid
+Bad collision should be avoided at all costs. See the following picture as an example of bad collision:
+![Bad collision](examples/BadCollision.png)

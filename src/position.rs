@@ -12,7 +12,7 @@ impl Position {
         Self { x, y }
     }
 
-    pub fn from_vector(vector: Vector) -> Self {
+    fn from_vector(vector: Vector) -> Self {
         let x = vector.x.round();
         let y = vector.y.round();
         if x < u32::MIN as f64 {
@@ -44,6 +44,12 @@ impl Position {
             );
         };
         Position::new(x as u32, y as u32)
+    }
+}
+
+impl From<Vector> for Position {
+    fn from(val: Vector) -> Self {
+        Position::from_vector(val)
     }
 }
 
