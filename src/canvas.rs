@@ -19,7 +19,7 @@ pub trait Drawable<T> {
 
     fn render(&self) -> Res<()>;
 
-    fn clear(&mut self, clear_value: u8);
+    fn clear(&mut self, clear_value: [u8; 4]);
 
     fn set_pixel(&mut self, position: &T, color: &Color);
 
@@ -119,7 +119,7 @@ impl Drawable<Position> for Canvas {
         self.size.height
     }
 
-    fn clear(&mut self, clear_value: u8) {
+    fn clear(&mut self, clear_value: [u8; 4]) {
         self.buffer.clear(clear_value)
     }
 
@@ -184,7 +184,7 @@ mod tests {
     pub fn draw_line() -> Res<()> {
         let size = PhysicalSize::new(10, 10);
         let mut canvas = Canvas::new_with_simplebuffer(size);
-        canvas.clear(100);
+        canvas.clear(Color::new_rgba(100, 100, 100, 100).to_slice());
 
         let middle = Position::new(size.width / 2, size.height / 2);
         let bottom_right = Position::new(size.width - 1, size.height - 1);

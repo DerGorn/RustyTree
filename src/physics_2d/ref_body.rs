@@ -3,10 +3,10 @@ use std::{cell::RefCell, hash::Hash, rc::Rc};
 
 use crate::math_2d::Vector;
 
-use super::{Body, CollisionBody, VisiualShape};
+use super::{Body, CollisionBody, VisualShape};
 
 #[derive(Debug, Clone, Eq)]
-pub struct RefBody(pub Rc<RefCell<Body<Vector>>>);
+pub struct RefBody(Rc<RefCell<Body<Vector>>>);
 
 impl RefBody {
     pub fn new(
@@ -15,7 +15,7 @@ impl RefBody {
         velocity: Vector,
         angle_deg: f64,
         rotation_velocity: f64,
-        shape: Option<VisiualShape>,
+        shape: Option<VisualShape>,
         collision_body: Option<CollisionBody>,
     ) -> Self {
         Body::new(

@@ -95,6 +95,11 @@ impl Color {
         }
     }
 }
+impl From<&str> for Color {
+    fn from(value: &str) -> Self {
+        Self::from_str(value)
+    }
+}
 
 #[cfg(test)]
 mod tests {

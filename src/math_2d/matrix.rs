@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 use std::fmt::Display;
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub, SubAssign, DivAssign};
 
 /// (a b
 ///  c d)
@@ -270,6 +270,53 @@ impl MulAssign<&f64> for Matrix {
         self.b *= rhs;
         self.c *= rhs;
         self.d *= rhs;
+    }
+}
+
+//Div
+impl Div<f64> for Matrix {
+    type Output = Matrix;
+
+    fn div(self, rhs: f64) -> Self::Output {
+        Matrix::new(self.a / rhs, self.b / rhs, self.c / rhs, self.d / rhs)
+    }
+}
+impl Div<&f64> for Matrix {
+    type Output = Matrix;
+
+    fn div(self, rhs: &f64) -> Self::Output {
+        Matrix::new(self.a / rhs, self.b / rhs, self.c / rhs, self.d / rhs)
+    }
+}
+impl Div<f64> for &Matrix {
+    type Output = Matrix;
+
+    fn div(self, rhs: f64) -> Self::Output {
+        Matrix::new(self.a / rhs, self.b / rhs, self.c / rhs, self.d / rhs)
+    }
+}
+impl Div<&f64> for &Matrix {
+    type Output = Matrix;
+
+    fn div(self, rhs: &f64) -> Self::Output {
+        Matrix::new(self.a / rhs, self.b / rhs, self.c / rhs, self.d / rhs)
+    }
+}
+//DivAssign
+impl DivAssign<f64> for Matrix {
+    fn div_assign(&mut self, rhs: f64) {
+        self.a = self.a / rhs;
+        self.b = self.b / rhs;
+        self.c = self.c / rhs;
+        self.d = self.d / rhs;
+    }
+}
+impl DivAssign<&f64> for Matrix {
+    fn div_assign(&mut self, rhs: &f64) {
+        self.a = self.a / rhs;
+        self.b = self.b / rhs;
+        self.c = self.c / rhs;
+        self.d = self.d / rhs;
     }
 }
 

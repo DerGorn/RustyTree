@@ -1,6 +1,9 @@
+use std::collections::HashSet;
+
 use crate::physics_2d::{RefBody, Shape};
 use crate::spatial_hashgrid::SpatialHashgrid;
 use crate::PhysicalSize;
+use uuid::Uuid;
 
 type CollisionShape = Shape;
 
@@ -30,16 +33,17 @@ pub enum Mass {
 ///
 #[derive(Debug)]
 pub struct CollisionLayer {
-    obstacles: Vec<RefBody>,
-    actors: Vec<RefBody>,
-    collision_grid: SpatialHashgrid<RefBody>,
+    obstacles: HashSet<RefBody>,
+    actors: HashSet<RefBody>,
+    collision_grid: SpatialHashgrid<Uuid>,
 }
+///TODO: WHAT IS WITH BIG BODY SPANNING OVER MULTIPLE CELLS?
 impl CollisionLayer {
     ///Creates a new CollisionLayer. The underlaying SpatialHashgrid will have the total dimensions `grid_size` and each cell in the grid has the dimensions `cell_size`
     pub fn new(grid_size: PhysicalSize<u32>, cell_size: PhysicalSize<u32>) -> Self {
         CollisionLayer {
-            obstacles: vec![],
-            actors: vec![],
+            obstacles: HashSet::new(),
+            actors: HashSet::new(),
             collision_grid: SpatialHashgrid::new(grid_size, cell_size),
         }
     }
@@ -52,15 +56,12 @@ impl CollisionLayer {
     /// Meaning: If a body is allready part of the layer as a actor, it can not be added as a obstacle, before being removed and vice versa.
     pub fn add_body(&mut self, collision_body: RefBody, is_obstacle: bool) -> bool {
         let position = collision_body.position().clone();
-        if self
-            .collision_grid
-            .insert(collision_body.clone(), &position)
-        {
+        if self.collision_grid.insert(collision_body.id(), &position) {
             if is_obstacle {
-                self.obstacles.push(collision_body)
+                self.obstacles.insert(collision_body)
             } else {
-                self.actors.push(collision_body)
-            }
+                self.actors.insert(collision_body)
+            };
             true
         } else {
             false
@@ -73,47 +74,29 @@ impl CollisionLayer {
     pub fn remove_body(&mut self, collision_body: &RefBody, is_obstacle: Option<bool>) -> bool {
         if self
             .collision_grid
-            .contains(collision_body.into(), &collision_body.position())
+            .contains(&collision_body.id(), &collision_body.position())
         {
-            match is_obstacle {
+            let body_in_layer = match is_obstacle {
                 Some(is_obstacle) => {
                     if is_obstacle {
-                        match self.obstacles.iter().position(|el| el == collision_body) {
-                            None => {
-                                return false;
-                            }
-                            Some(index) => {
-                                self.obstacles.remove(index);
-                            }
-                        }
+                        self.obstacles.remove(collision_body)
                     } else {
-                        match self.actors.iter().position(|el| el == collision_body) {
-                            None => {
-                                return false;
-                            }
-                            Some(index) => {
-                                self.actors.remove(index);
-                            }
-                        }
+                        self.actors.remove(collision_body)
                     }
                 }
-                None => match self.obstacles.iter().position(|el| el == collision_body) {
-                    None => match self.actors.iter().position(|el| el == collision_body) {
-                        None => {
-                            return false;
-                        }
-                        Some(index) => {
-                            self.actors.remove(index);
-                        }
-                    },
-                    Some(index) => {
-                        self.obstacles.remove(index);
+                None => {
+                    if !self.obstacles.remove(collision_body) {
+                        self.actors.remove(collision_body)
+                    } else {
+                        true
                     }
-                },
+                }
+            };
+            if body_in_layer {
+                self.collision_grid
+                    .remove(&collision_body.id(), &collision_body.position());
             }
-            self.collision_grid
-                .remove(collision_body, &collision_body.position());
-            true
+            body_in_layer
         } else {
             false
         }
@@ -165,6 +148,7 @@ mod tests {
         assert!(collision_layer.add_body(b4.clone(), false));
         assert!(!collision_layer.add_body(b3.clone(), false));
 
+        println!("{:?}", collision_layer);
         assert!(!collision_layer.remove_body(&b3, Some(false)));
         assert!(collision_layer.remove_body(&b3, Some(true)));
         assert!(!collision_layer.remove_body(&b3, Some(false)));

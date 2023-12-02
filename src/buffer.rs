@@ -1,12 +1,17 @@
-use std::fmt::{format, Debug};
+use std::fmt::Debug;
 
 use crate::{PhysicalSize, Res};
 
 pub trait Buffer: Debug {
     fn buffer<'a>(&'a mut self) -> &'a mut [u8];
 
-    fn clear(&mut self, clear_value: u8) {
-        self.buffer().fill(clear_value);
+    fn clear(&mut self, clear_value: [u8; 4]) {
+        let mut i = 0;
+        self.buffer().fill_with(|| {
+            let v = clear_value[i];
+            i = (i + 1) % 4;
+            v
+        });
     }
 
     fn resize(&mut self, buffer_size: PhysicalSize<u32>);
@@ -70,6 +75,8 @@ impl Buffer for SimpleBuffer {
 
 #[cfg(test)]
 mod tests {
+    use crate::color::Color;
+
     use super::*;
     use std::fmt::Write;
 
@@ -110,7 +117,7 @@ mod tests {
     #[test]
     fn clear() {
         let mut buffer = SimpleBuffer::new(PhysicalSize::new(1, 2));
-        buffer.clear(200);
+        buffer.clear(Color::new_rgba(200, 200, 200, 200).to_slice());
 
         assert!(buffer.buffer().iter().all(|v| *v == 200_u8))
     }

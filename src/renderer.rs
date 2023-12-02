@@ -57,10 +57,15 @@ impl Vector {
 pub struct Renderer {
     pub camera: Camera,
     pub canvas: Canvas,
+    clear_color: Color,
 }
 impl Renderer {
     pub fn new(camera: Camera, canvas: Canvas) -> Self {
-        Renderer { camera, canvas }
+        Renderer {
+            camera,
+            canvas,
+            clear_color: Color::from_str("black"),
+        }
     }
 
     pub fn resize(&mut self, new_size: PhysicalSize<u32>, new_camera: Option<Camera>) {
@@ -70,6 +75,10 @@ impl Renderer {
         }
         self.canvas.resize(new_size)
     }
+
+    pub fn set_clear_color(&mut self, clear_color: Color) {
+        self.clear_color = clear_color
+    }
 }
 
 impl Renderer {
@@ -77,14 +86,33 @@ impl Renderer {
         self.canvas.render()
     }
 
-    pub fn clear(&mut self, clear_value: u8) {
-        self.canvas.clear(clear_value)
+    pub fn clear(&mut self) {
+        self.canvas.clear(self.clear_color.to_slice())
     }
 
     pub fn draw_line(&mut self, start: &Vector, end: &Vector) {
-        let start_projection = self.camera.clamped_projection_to_position(&start);
-        let end_projection = self.camera.clamped_projection_to_position(&end);
-        self.canvas.draw_line(&start_projection, &end_projection);
+        let mut start_projection = self.camera.project(&start);
+        let mut end_projection = self.camera.project(&end);
+        let edge = &end_projection - &start_projection;
+        if start_projection.x < 0.0 || start_projection.y < 0.0 {
+            if !start_projection.clamp_point_along_edge(&edge, true) {
+                return;
+            }
+        }
+        if end_projection.x < 0.0 || end_projection.y < 0.0 {
+            if !end_projection.clamp_point_along_edge(&edge, false) {
+                return;
+            }
+        }
+        self.canvas
+            .draw_line(&start_projection.into(), &end_projection.into());
+    }
+
+    pub fn fill_line(&mut self, start: &Vector, end: &Vector) {
+        let draw_color = self.canvas.get_draw_color();
+        self.set_draw_color(self.canvas.get_fill_color());
+        self.draw_line(start, end);
+        self.set_draw_color(draw_color);
     }
 
     pub fn draw_ellipse(&mut self, center: &Vector, a: u32, b: u32, angel_degree: f64) {
@@ -130,6 +158,7 @@ impl Renderer {
         }
     }
 
+    ///TODO: FUCKING MYSTICAL STUFF. I CANT DO ANYTHING HERE WITHOUT IT DETONATING. WRITE THIS SHIT BETTER!!!!!
     pub fn fill_ellipse(&mut self, center: &Vector, a: u32, b: u32, angel_degree: f64) {
         let mut a = a as f64;
         let mut b = b as f64;
@@ -171,6 +200,7 @@ impl Renderer {
         }
     }
 
+    ///TODO: CORNERS ARE DRAWN TWICE => TOO BRIGHT
     pub fn draw_rect(&mut self, center: &Vector, width: u32, height: u32, angel_degree: f64) {
         let w = width as f64 / 2.0;
         let h = height as f64 / 2.0;
@@ -374,7 +404,15 @@ impl Renderer {
         }
     }
 
-    pub fn set_pixel(&mut self, position: &Vector, color: &Color) {
+    pub fn fill_pixel(&mut self, position: &Vector) {
+        self.set_pixel(position, &self.canvas.get_fill_color())
+    }
+
+    pub fn draw_pixel(&mut self, position: &Vector) {
+        self.set_pixel(position, &self.canvas.get_draw_color())
+    }
+
+    fn set_pixel(&mut self, position: &Vector, color: &Color) {
         let position = self.camera.clamped_projection_to_position(&position);
         if position.x < self.get_width() && position.y < self.get_height() {
             self.canvas.set_pixel(&position, color)
@@ -395,5 +433,35 @@ impl Renderer {
 
     pub fn get_width(&self) -> u32 {
         self.canvas.get_width()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn draw_offscreen_line() {
+        let size = PhysicalSize::new(4, 4);
+        let mut canvas = Renderer::new(
+            Camera::new(Vector::zero()),
+            Canvas::new_with_simplebuffer(size),
+        );
+        canvas.clear();
+
+        let start = Vector::new(0.0, -2.0);
+        let end = Vector::new(4.0, 2.0);
+
+        canvas.set_draw_color(Color::from_str("red"));
+        canvas.draw_line(&start, &end);
+
+        let p1 = Position::new(1, 0);
+        let index1 = ((size.width * p1.y + p1.x) * 4) as usize;
+        let p2 = Position::new(0, 0);
+        let index2 = ((size.width * p2.y + p2.x) * 4) as usize;
+
+        let buffer = canvas.canvas.as_slice();
+        assert_ne!(255, buffer[index1]);
+        assert_ne!(255, buffer[index2]);
     }
 }

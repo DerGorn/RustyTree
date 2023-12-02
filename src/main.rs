@@ -4,8 +4,8 @@ use rusty_tree::{
     camera::Camera,
     canvas::{self, Canvas, Drawable},
     color::Color,
-    math_2d::Vector,
-    physics_2d::Body,
+    math_2d::{Intersection, Vector},
+    physics_2d::{Body, BodyBuilder, Shape, VisualShape},
     position::Position,
     renderer::Renderer,
     world::World,
@@ -17,29 +17,6 @@ use winit::{
     window::WindowBuilder,
 };
 
-fn reset_background_buffer(buffer: &mut World) {
-    let buffer = &mut buffer.renderer;
-    buffer.clear(0);
-
-    let (a, b) = (
-        (buffer.get_width() as f64 * 0.25) as u32,
-        (buffer.get_height() as f64 * 0.25) as u32,
-    );
-
-    buffer.set_draw_color(Color::from_str("red"));
-    let center = Vector::zero();
-    for deg in (0..180).step_by(2) {
-        let deg = deg as f64;
-        buffer.set_fill_color(Color::new_hsva(
-            (deg * 255.0 / 180.0).round() as u8,
-            255,
-            255,
-            20,
-        ));
-        buffer.fill_ellipse(&center, 2 * a, 2 * b, deg);
-    }
-}
-
 struct Point {
     color: Color,
     position: Vector,
@@ -47,6 +24,12 @@ struct Point {
 }
 
 fn main() {
+    let v1 = Vector::new(10.0, 10.0);
+    let v2 = Vector::new(-10.0, -10.0);
+
+    let res = v1.intersection(&-&v2, &Vector::zero());
+    println!("{:?}", res);
+    panic!("");
     let event_loop = EventLoop::new();
     let builder = WindowBuilder::new().with_title("RustyTree");
     // .with_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
@@ -65,17 +48,16 @@ fn main() {
         PhysicalSize::new(size.width / 100, size.height / 100),
         1,
     );
+    world.renderer.set_draw_color("red".into());
+
+    let body: Body<Vector> = BodyBuilder::new()
+        .shape(Shape::Ellipse(Vector::zero(), 100, 200), false)
+        .build();
+    world.add_body(body, None);
 
     let mut first = true;
-    let mut populate_world = true;
     event_loop.run(move |event, _, control_flow| {
         control_flow.set_poll();
-
-        if populate_world {
-            populate_world = false;
-            let body = Body::new(0.0, Vector::zero(), Vector::zero(), 0.0, 0.0, None, None);
-            world.add_body(body, None);
-        }
 
         match event {
             Event::WindowEvent {
@@ -97,7 +79,6 @@ fn main() {
                     ))),
                 );
                 first = true;
-                reset_background_buffer(&mut world);
             }
             Event::WindowEvent {
                 event: WindowEvent::CursorMoved { position, .. },
@@ -134,7 +115,7 @@ fn main() {
                 //     pixel[2] = 0xff; // B
                 //     pixel[3] = 0xff; // A
                 // }
-                world.renderer.render().unwrap();
+                world.render().unwrap();
             }
             _ => (),
         }

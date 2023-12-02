@@ -3,7 +3,7 @@ use std::hash::Hash;
 use std::{cell::RefCell, error::Error, rc::Rc};
 
 use math_2d::Vector;
-use physics_2d::{Body, CollisionBody, VisiualShape};
+use physics_2d::{Body, CollisionBody, RefBody, VisualShape};
 use position::Position;
 
 #[derive(Debug, Clone, Copy)]
@@ -55,10 +55,9 @@ mod debug {
     }
     pub(crate) use debug_print;
 }
-// use std::any::Any;
-// fn debug_print(name_value_pairs: &[(&str, impl Any + Debug)]) {
-//     #[cfg(not(test))]
-//     for (name, value) in name_value_pairs {
-//         println!("{}: {:?}", name, value);
-//     }
-// }
+
+impl RefBody {
+    fn id(&self) -> uuid::Uuid {
+        self.borrow().uuid
+    }
+}

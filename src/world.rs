@@ -1,12 +1,12 @@
 use crate::{
-    math_2d::Vector, physics_2d::Body, physics_2d::CollisionLayer, renderer::Renderer, PhysicalSize, physics_2d::RefBody,
+    math_2d::Vector, physics_2d::Body, physics_2d::CollisionLayer, physics_2d::RefBody,
+    renderer::Renderer, PhysicalSize, Res,
 };
 
 pub struct CollisionSpecifier {
     collision_layer: usize,
     is_collision_obstacle: Option<bool>,
 }
-
 
 pub struct World {
     bodies: Vec<RefBody>,
@@ -36,6 +36,14 @@ impl World {
         }
     }
 
+    pub fn render(&mut self) -> Res<()> {
+        self.renderer.clear();
+        for body in &self.bodies {
+            body.borrow().render(&mut self.renderer);
+        }
+        self.renderer.render()
+    }
+
     pub fn add_body(
         &mut self,
         body: Body<Vector>,
@@ -52,11 +60,7 @@ impl World {
         };
     }
 
-    pub fn remove_body(
-        &mut self,
-        body: &RefBody,
-        collision_specifier: Option<CollisionSpecifier>,
-    ) {
+    pub fn remove_body(&mut self, body: &RefBody, collision_specifier: Option<CollisionSpecifier>) {
         let has_collision = body.has_collision();
         if has_collision {
             if let Some(specifier) = collision_specifier {

@@ -4,7 +4,7 @@ use std::ops::Mul;
 pub use matrix::Matrix;
 
 mod vector;
-pub use vector::Vector;
+pub use vector::{Vector, Intersection};
 
 impl Vector {
     pub fn rotate(&self, radians: f64) -> Vector {
