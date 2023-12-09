@@ -1,7 +1,7 @@
 use std::hash::Hash;
 use uuid::Uuid;
 
-use crate::renderer::Renderer;
+use crate::{math_2d::Vector, renderer::Renderer};
 
 use super::{collision::CollisionBody, Shape};
 
@@ -15,45 +15,49 @@ impl VisualShape {
         VisualShape { shape, fill }
     }
 
-    fn render(&self, renderer: &mut Renderer, angle_deg: f64) {
+    fn render(&self, renderer: &mut Renderer, angle_deg: f64, position: &Vector) {
         if self.fill {
-            self.fill(renderer, angle_deg)
+            self.fill(renderer, angle_deg, position)
         } else {
-            self.draw(renderer, angle_deg)
+            self.draw(renderer, angle_deg, position)
         }
     }
 
-    fn fill(&self, renderer: &mut Renderer, angle_deg: f64) {
+    fn fill(&self, renderer: &mut Renderer, angle_deg: f64, position: &Vector) {
         match &self.shape {
             Shape::Line(start, end) => {
                 let center = (start + end) / 2.0;
                 renderer.fill_line(
-                    &start.rotate_degree_around(angle_deg, &center),
-                    &end.rotate_degree_around(angle_deg, &center),
+                    &(position + start.rotate_degree_around(angle_deg, &center)),
+                    &(position + end.rotate_degree_around(angle_deg, &center)),
                 )
             }
-            Shape::Pixel(pos) => renderer.fill_pixel(&pos),
+            Shape::Pixel(pos) => renderer.fill_pixel(&(position + pos)),
             Shape::Rect(center, width, height) => {
-                renderer.fill_rect(&center, *width, *height, angle_deg)
+                renderer.fill_rect(&(position + center), *width, *height, angle_deg)
             }
-            Shape::Ellipse(center, a, b) => renderer.fill_ellipse(&center, *a, *b, angle_deg),
+            Shape::Ellipse(center, a, b) => {
+                renderer.fill_ellipse(&(position + center), *a, *b, angle_deg)
+            }
         }
     }
 
-    fn draw(&self, renderer: &mut Renderer, angle_deg: f64) {
+    fn draw(&self, renderer: &mut Renderer, angle_deg: f64, position: &Vector) {
         match &self.shape {
             Shape::Line(start, end) => {
                 let center = (start + end) / 2.0;
                 renderer.draw_line(
-                    &start.rotate_degree_around(angle_deg, &center),
-                    &end.rotate_degree_around(angle_deg, &center),
+                    &(position + start.rotate_degree_around(angle_deg, &center)),
+                    &(position + end.rotate_degree_around(angle_deg, &center)),
                 )
             }
-            Shape::Pixel(pos) => renderer.draw_pixel(&pos),
+            Shape::Pixel(pos) => renderer.draw_pixel(&(position + pos)),
             Shape::Rect(center, width, height) => {
-                renderer.draw_rect(&center, *width, *height, angle_deg)
+                renderer.draw_rect(&(position + center), *width, *height, angle_deg)
             }
-            Shape::Ellipse(center, a, b) => renderer.draw_ellipse(&center, *a, *b, angle_deg),
+            Shape::Ellipse(center, a, b) => {
+                renderer.draw_ellipse(&(position + center), *a, *b, angle_deg)
+            }
         }
     }
 }
@@ -94,10 +98,11 @@ impl<T> Body<T> {
     pub fn has_collision(&self) -> bool {
         self.collision_body.is_some()
     }
-
+}
+impl Body<Vector> {
     pub fn render(&self, renderer: &mut Renderer) {
         if let Some(shape) = &self.shape {
-            shape.render(renderer, self.angle_deg)
+            shape.render(renderer, self.angle_deg, &self.position)
         }
     }
 }

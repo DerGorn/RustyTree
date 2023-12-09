@@ -79,9 +79,9 @@ impl Vector {
     }
 
     fn overlap_area(&self, other: &Vector, support: &Vector) -> Intersection {
+        let other_len = other.length();
         let self_len = self.length();
         let support_len = support.length();
-        let other_len = other.length();
         let support_fract = support_len / self_len;
 
         let self_slope = self.slope();
@@ -91,6 +91,7 @@ impl Vector {
         let line_direction = &self_slope * &other_slope > 0.0;
 
         debug_print!("self_len" self_len, "support_len" support_len, "other_len" other_len, "support_fract" support_fract, "self_slope" self_slope, "suppoert_slope" support_slope, "other_slope" other_slope, "suppoert_direction" support_direction, "line_direction" line_direction);
+
         if line_direction && support_direction {
             //v1.slope = v2.slope && v1.slope = support.slope
             if self_len < support_len {
@@ -147,12 +148,27 @@ impl Vector {
     /// Calculates the intersection point of `self` and `other`, where the relative position between
     /// them is given as `support`.
     ///
-    /// If a intersection point exists the returned `Some(r)`
+    /// If a intersection point exists the returned `Point(r)`
     /// gives the factor of self at which the intersection point lies.
-    /// If the
+    /// If they overlap a 'Line(r1, r2)' will be returned, where the ris mark the
+    /// section of self that overlaps.
     pub fn intersection(&self, other: &Vector, support: &Vector) -> Intersection {
+        if other.length() == 0.0 {
+            return if support.length() == 0.0 {
+                Intersection::Point(0.0)
+            } else if self.length() == 0.0 {
+                Intersection::None
+            } else {
+                let r = support.x / self.x;
+                if r < 0.0 || r > 1.0 || r - support.y / self.y > 1e-8 {
+                    Intersection::None
+                } else {
+                    Intersection::Point(r)
+                }
+            };
+        }
         let mut swapped_vecs = false;
-        debug_print!("self" self, "other" other, "suppoert" support);
+        debug_print!("self" self, "other" other, "support" support);
         let (v1, v2) = if other.y == 0.0 {
             swapped_vecs = true;
             (other, self)
@@ -213,10 +229,19 @@ impl Vector {
         Intersection::Point(if swapped_vecs { t } else { r })
     }
 
+    pub fn get_intersection_point(&self, intersect: Intersection) -> Vec<Vector> {
+        match intersect {
+            Intersection::None => vec![],
+            Intersection::Point(r) => vec![self * r],
+            Intersection::Line(r1, r2) => vec![self * r1, self * r2],
+        }
+    }
+
     fn slope(&self) -> SlopeQuadrant {
         let mut slope = (self.y / self.x).abs();
         if slope.is_nan() {
             slope = f64::INFINITY;
+            // slope = 1.0;
         }
         if self.x > 0.0 {
             if self.y >= 0.0 {
@@ -729,5 +754,21 @@ mod tests {
             v1.intersection(&-&v3, &Vector::new(10.0, 0.0)),
             Intersection::Point(0.5)
         );
+        assert_eq!(
+            v1.intersection(&Vector::zero(), &Vector::scalar(0.0)),
+            Intersection::Point(0.0)
+        );
+        assert_eq!(
+            v1.intersection(&Vector::zero(), &Vector::scalar(10.0)),
+            Intersection::Point(1.0)
+        );
+        assert_eq!(
+            v1.intersection(&Vector::scalar(0.0), &Vector::scalar(5.0)),
+            Intersection::Point(0.5)
+        );
+        assert_eq!(
+            v1.intersection(&Vector::scalar(0.0), &Vector::scalar(-5.0)),
+            Intersection::None
+        )
     }
 }

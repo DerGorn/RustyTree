@@ -135,22 +135,22 @@ impl Renderer {
         for x in -a..=a {
             let height = ((1.0 - x.pow(2) as f64 / a.pow(2) as f64) * b.pow(2) as f64).sqrt();
 
-            let x = center.x + x as f64;
-            let y = center.y - height;
+            let x = x as f64;
+            let y = -height;
             if first {
-                bottom = Vector::new(x, center.y).rotate_degree(angel_degree);
-                top = Vector::new(x, center.y).rotate_degree(angel_degree);
+                bottom = center + Vector::new(x, 0.0).rotate_degree(angel_degree);
+                top = bottom.clone();
                 first = false;
             }
 
-            let target = Vector::new(x, y).rotate_degree(angel_degree);
+            let target = center + Vector::new(x, y).rotate_degree(angel_degree);
 
             self.draw_line(&bottom, &target);
 
             bottom = target;
 
-            let y = center.y + height;
-            let target = Vector::new(x, y).rotate_degree(angel_degree);
+            let y = height;
+            let target = center + Vector::new(x, y).rotate_degree(angel_degree);
 
             self.draw_line(&top, &target);
 
@@ -179,7 +179,7 @@ impl Renderer {
         let f1 = center + &focal_offset;
         let f2 = center - &focal_offset;
 
-        let point_on_ellipse = (center + Vector::new(0.0, b)).rotate_degree(alpha);
+        let point_on_ellipse = center + Vector::new(0.0, b).rotate_degree(alpha);
         let distance = point_on_ellipse.distance(&f1) + point_on_ellipse.distance(&f2);
 
         let is_inside = |vector: &Vector| vector.distance(&f1) + vector.distance(&f2) < distance;

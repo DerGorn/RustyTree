@@ -24,12 +24,12 @@ struct Point {
 }
 
 fn main() {
-    let v1 = Vector::new(10.0, 10.0);
-    let v2 = Vector::new(-10.0, -10.0);
+    // let v1 = Vector::new(10.0, 10.0);
+    // let v2 = Vector::new(-10.0, -10.0);
 
-    let res = v1.intersection(&-&v2, &Vector::zero());
-    println!("{:?}", res);
-    panic!("");
+    // let res = v1.intersection(&Vector::zero(), &Vector::scalar(10.0));
+    // println!("{:?}", res);
+    // panic!("");
     let event_loop = EventLoop::new();
     let builder = WindowBuilder::new().with_title("RustyTree");
     // .with_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
@@ -51,7 +51,31 @@ fn main() {
     world.renderer.set_draw_color("red".into());
 
     let body: Body<Vector> = BodyBuilder::new()
-        .shape(Shape::Ellipse(Vector::zero(), 100, 200), false)
+        .shape(Shape::Ellipse(Vector::new(150.0, 0.0), 100, 200), true)
+        .angle_deg(45.0)
+        .build();
+    world.add_body(body, None);
+    let body: Body<Vector> = BodyBuilder::new()
+        .shape(Shape::Ellipse(Vector::new(150.0, 0.0), 100, 200), false)
+        .angle_deg(45.0)
+        .build();
+    world.add_body(body, None);
+    let body: Body<Vector> = BodyBuilder::new()
+        .shape(Shape::Ellipse(Vector::scalar(0.0), 150, 150), false)
+        .build();
+    world.add_body(body, None);
+    let body: Body<Vector> = BodyBuilder::new()
+        .shape(
+            Shape::Line(Vector::new(-150.0, 0.0), Vector::new(150.0, 0.0)),
+            true,
+        )
+        .build();
+    world.add_body(body, None);
+    let body: Body<Vector> = BodyBuilder::new()
+        .shape(
+            Shape::Line(Vector::new(0.0, -150.0), Vector::new(0.0, 150.0)),
+            true,
+        )
         .build();
     world.add_body(body, None);
 
